@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a1a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JBS POS">
+<meta name="mobile-web-app-capable" content="yes">
+<title>JBS — Motorcycle Spare Parts POS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--surface3:#2e2e2e;--border:#333;--border2:#444;--text:#f0f0f0;--text2:#aaa;--text3:#666;--accent:#e8a000;--accent2:#ffc13d;--green:#2ecc71;--red:#e74c3c;--blue:#3498db;--orange:#e8a000;--r:10px;--r2:14px;--nav-h:68px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:16px;padding-bottom:var(--nav-h)}
+#offline-badge{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;font-size:13px;font-weight:700;padding:6px 16px;border-radius:20px;z-index:9999;display:none;white-space:nowrap}
+#offline-badge.show{display:block}
+#install-banner{position:fixed;bottom:calc(68px + 8px);left:8px;right:8px;background:#1a2d1a;border:1px solid var(--green);border-radius:12px;padding:12px 14px;z-index:150;display:none;align-items:center;gap:10px}
+#toast{position:fixed;bottom:calc(var(--nav-h) + 12px);left:50%;transform:translateX(-50%) translateY(40px);background:var(--surface3);border:1px solid var(--border2);color:var(--text);padding:12px 22px;border-radius:24px;font-size:14px;font-weight:600;transition:transform .25s,opacity .25s;z-index:999;opacity:0;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;gap:12px;height:60px;position:sticky;top:0;z-index:100}
+.logo{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;color:var(--accent);letter-spacing:1px;line-height:1}
+.logo span{color:var(--text2);font-size:12px;font-weight:400;display:block;margin-top:1px}
+header .spacer{flex:1}
+.header-date{font-size:12px;color:var(--text2);text-align:right;line-height:1.4}
+nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100;overflow-x:auto;-webkit-overflow-scrolling:touch}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:1;min-width:64px;background:none;border:none;color:var(--text3);font-family:'Barlow',sans-serif;padding:8px 4px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s;border-top:2px solid transparent}
+.ni{font-size:22px;line-height:1}
+.nl{font-size:10px;font-weight:600}
+nav button.active{color:var(--accent);border-top-color:var(--accent)}
+nav button:active{background:var(--surface2)}
+@media(min-width:900px){
+  nav{position:sticky;top:60px;bottom:auto;height:auto;border-top:none;border-bottom:1px solid var(--border);flex-direction:row;padding:0 16px;gap:2px}
+  nav button{flex-direction:row;gap:6px;padding:12px 14px;min-width:auto;flex:none;border-top:none;border-bottom:2px solid transparent}
+  .ni{font-size:16px} .nl{font-size:13px}
+  nav button.active{border-bottom-color:var(--accent);border-top-color:transparent}
+  body{padding-bottom:0} #toast{bottom:24px}
+}
+main{padding:14px;max-width:900px;margin:0 auto}
+@media(min-width:600px){main{padding:20px}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:16px}
+.card-title{font-size:12px;color:var(--text2);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.card-value{font-size:28px;font-weight:700;color:var(--text);line-height:1.1}
+.card-value.green{color:var(--green)} .card-value.red{color:var(--red)} .card-value.accent{color:var(--accent)}
+.card-sub{font-size:12px;color:var(--text3);margin-top:4px}
+.grid-4{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.grid-2{display:grid;grid-template-columns:1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:600px){.grid-4{grid-template-columns:repeat(4,1fr)}.grid-2{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:1fr 1fr 1fr}}
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.sec-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--text)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 18px;border-radius:var(--r);border:none;cursor:pointer;font-family:'Barlow',sans-serif;font-size:15px;font-weight:700;transition:all .15s;min-height:48px}
+.btn-accent{background:var(--accent);color:#000} .btn-accent:active{background:var(--accent2)}
+.btn-ghost{background:var(--surface3);color:var(--text);border:1px solid var(--border2)} .btn-ghost:active{background:var(--surface2)}
+.btn-red{background:var(--red);color:#fff} .btn-green{background:var(--green);color:#fff}
+.btn-sm{padding:8px 12px;font-size:13px;min-height:40px}
+input,select,textarea{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:'Barlow',sans-serif;font-size:16px;padding:12px 14px;width:100%;transition:border-color .15s;min-height:50px}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+label{font-size:14px;color:var(--text2);display:block;margin-bottom:6px;font-weight:500}
+.form-group{margin-bottom:14px}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;min-width:480px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:700;padding:10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:12px 10px;font-size:14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none} tr:active td{background:var(--surface2)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.badge-green{background:#1a3d2b;color:var(--green)} .badge-red{background:#3d1a1a;color:var(--red)}
+.badge-orange{background:#3d2a00;color:var(--accent)} .badge-blue{background:#1a2d3d;color:var(--blue)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2) var(--r2) 0 0;padding:24px 20px 32px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto}
+.modal-title{font-size:20px;font-weight:700;margin-bottom:18px}
+.modal-footer{display:flex;gap:10px;justify-content:stretch;margin-top:18px}
+.modal-footer .btn{flex:1}
+@media(min-width:600px){.modal-overlay{align-items:center}.modal{border-radius:var(--r2);max-width:500px}}
+.alert{padding:12px 16px;border-radius:var(--r);font-size:14px;margin-bottom:12px}
+.alert-red{background:#3d1a1a;border:1px solid #7d2020;color:#ff8080}
+.alert-orange{background:#3d2a00;border:1px solid #7d5500;color:var(--accent2)}
+.alert-green{background:#1a3d2b;border:1px solid #1a6e40;color:#50e090}
+.period-tabs{display:flex;gap:4px;background:var(--surface2);border-radius:var(--r);padding:4px;width:100%;margin-bottom:16px}
+.period-tab{background:none;border:none;color:var(--text2);font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;padding:8px 4px;border-radius:8px;cursor:pointer;flex:1;text-align:center}
+.period-tab.active{background:var(--accent);color:#000;font-weight:700}
+.receipt{background:#fff;color:#111;border-radius:8px;padding:0;max-width:340px;margin:0 auto;font-family:'Barlow',sans-serif;font-size:13px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.15)}
+.receipt-header{background:#111;color:#fff;padding:20px 20px 16px;text-align:center}
+.receipt-logo-box{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;background:#e8a000;border-radius:50%;margin-bottom:8px}
+.receipt-logo-icon{font-size:26px;line-height:1}
+.receipt-shop-name{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;color:#e8a000;letter-spacing:2px}
+.receipt-shop-sub{font-size:11px;color:#aaa;margin-top:2px;letter-spacing:.5px}
+.receipt-body{padding:16px 20px}
+.receipt-meta{background:#f5f5f5;border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#555;display:grid;grid-template-columns:auto 1fr;gap:3px 10px}
+.receipt-meta strong{color:#111}
+.receipt-divider{border:none;border-top:1px dashed #ccc;margin:10px 0}
+.receipt-item{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-size:13px}
+.receipt-item-name{flex:1;color:#222;padding-right:8px}
+.receipt-item-qty{color:#888;font-size:12px;margin-right:8px;white-space:nowrap}
+.receipt-item-price{font-weight:600;color:#111;white-space:nowrap}
+.receipt-total-row{display:flex;justify-content:space-between;align-items:center;background:#111;color:#fff;padding:12px 14px;border-radius:6px;margin-top:10px}
+.receipt-total-label{font-size:13px;font-weight:600;letter-spacing:.5px}
+.receipt-total-amount{font-size:20px;font-weight:800;color:#e8a000}
+.receipt-footer{text-align:center;padding:12px 20px 16px;font-size:11px;color:#888;border-top:1px solid #eee}
+.receipt-footer strong{color:#555}
+.receipt-receipt-no{font-family:monospace;background:#f5f5f5;padding:3px 8px;border-radius:4px;font-size:11px;color:#555}
+#low-stock-banner{background:#3d2a00;border:1px solid #7d5500;border-radius:var(--r);padding:12px 16px;margin-bottom:14px;font-size:14px;color:var(--accent2);display:none;cursor:pointer;font-weight:500}
+#low-stock-banner.show{display:block}
+.progress-bar{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;background:var(--accent);border-radius:4px}
+.page{display:none} .page.active{display:block}
+.sale-item{display:flex;align-items:center;gap:8px;padding:12px;background:var(--surface2);border-radius:var(--r);margin-bottom:8px}
+.sale-item-name{flex:1;font-size:14px;font-weight:500}
+.sale-item-price{color:var(--accent);font-weight:700;min-width:90px;text-align:right;font-size:15px}
+.sale-item-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:22px;padding:0 4px;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center}
+.prod-result{display:flex;align-items:center;gap:10px;padding:12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);margin-bottom:8px}
+.section-gap{margin-bottom:20px}
+.qty-btn{background:var(--surface3);border:1px solid var(--border2);color:var(--text);width:36px;height:36px;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700}
+.qty-btn:active{background:var(--border)}
+#sync-indicator{position:fixed;top:68px;right:10px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;z-index:150;transition:all .3s;pointer-events:none}
+#sync-indicator.synced{background:#1a3d2b;color:var(--green)}
+#sync-indicator.syncing{background:#3d2a00;color:var(--accent)}
+#sync-indicator.error{background:#3d1a1a;color:var(--red)}
+@media(min-width:900px){#sync-indicator{top:12px;right:16px}}
+</style>
+</head>
+<body>
+<div id="offline-badge">● OFFLINE — changes saved locally</div>
+<div id="sync-indicator" class="synced">☁️ Synced</div>
+<div id="install-banner">
+  <span style="font-size:20px">📲</span>
+  <div style="flex:1;font-size:13px;color:var(--text)"><strong>Install JBS POS</strong><br><span style="color:var(--text2)">Add to home screen for the best experience</span></div>
+  <button onclick="installApp()" class="btn btn-green btn-sm">Install</button>
+  <button onclick="document.getElementById('install-banner').style.display='none'" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:0 4px">×</button>
+</div>
+<div id="toast"></div>
+<header>
+  <div class="logo">JBS <span>Motorcycle Spare Parts</span></div>
+  <div class="spacer"></div>
+  <div class="header-date" id="header-date"></div>
+</header>
+<nav id="main-nav">
+  <button class="active" onclick="showPage('dashboard')"><span class="ni">📊</span><span class="nl">Dashboard</span></button>
+  <button onclick="showPage('sell')"><span class="ni">🛒</span><span class="nl">Sell</span></button>
+  <button onclick="showPage('inventory')"><span class="ni">📦</span><span class="nl">Stock</span></button>
+  <button onclick="showPage('purchases')"><span class="ni">🏪</span><span class="nl">Purchases</span></button>
+  <button onclick="showPage('expenses')"><span class="ni">💸</span><span class="nl">Expenses</span></button>
+  <button onclick="showPage('instalments')"><span class="ni">📋</span><span class="nl">Instalments</span></button>
+  <button onclick="showPage('reports')"><span class="ni">📈</span><span class="nl">Reports</span></button>
+  <button onclick="showPage('assets')"><span class="ni">🏷️</span><span class="nl">Assets</span></button>
+  <button onclick="showPage('receipts')"><span class="ni">🧾</span><span class="nl">Receipts</span></button>
+</nav>
+<main>
+<div id="low-stock-banner" onclick="showPage('inventory')">⚠️ <strong>Low Stock Alert!</strong> Some products are running low. Tap to see inventory.</div>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="sec-header">
+    <div class="sec-title">Today's Overview</div>
+    <div class="period-tabs" style="width:auto;margin:0">
+      <button class="period-tab active" onclick="setDashPeriod('today',this)">Today</button>
+      <button class="period-tab" onclick="setDashPeriod('week',this)">Week</button>
+      <button class="period-tab" onclick="setDashPeriod('month',this)">Month</button>
+      <button class="period-tab" onclick="setDashPeriod('year',this)">Year</button>
+    </div>
+  </div>
+  <div class="grid-4 section-gap" id="dash-cards"></div>
+
+  <!-- CHARTS ROW -->
+  <div class="grid-2 section-gap">
+    <div class="card">
+      <div class="sec-header" style="margin-bottom:12px">
+        <div class="sec-title" style="font-size:16px">📊 Sales — Last 7 Days</div>
+      </div>
+      <div id="chart-sales-bar" style="width:100%;height:140px"></div>
+    </div>
+    <div class="card">
+      <div class="sec-header" style="margin-bottom:12px">
+        <div class="sec-title" style="font-size:16px">🏆 Top Products</div>
+        <span style="font-size:12px;color:var(--text3)" id="top-period-label">this period</span>
+      </div>
+      <div id="chart-top-products"></div>
+    </div>
+  </div>
+
+  <div class="grid-2 section-gap">
+    <div class="card">
+      <div class="sec-header"><div class="sec-title" style="font-size:16px">Recent Sales</div></div>
+      <div class="tbl-wrap"><table id="dash-recent-sales"><thead><tr><th>Product</th><th>Qty</th><th>Amount</th><th>Time</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <div class="sec-header"><div class="sec-title" style="font-size:16px">Stock Alerts</div></div>
+      <div id="dash-stock-alerts"></div>
+    </div>
+  </div>
+  <div class="card section-gap">
+    <div class="sec-header"><div class="sec-title" style="font-size:16px">Profit Breakdown <span style="font-size:12px;color:var(--text3);font-weight:400">(selected period)</span></div></div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;padding:8px 0">
+      <div><div class="card-title">Revenue</div><div class="card-value accent" id="pb-revenue">0</div></div>
+      <div><div class="card-title">Cost of Goods Sold</div><div class="card-value red" id="pb-cogs">0</div></div>
+      <div><div class="card-title">Gross Profit</div><div class="card-value green" id="pb-gross">0</div></div>
+      <div><div class="card-title">Expenses</div><div class="card-value red" id="pb-expenses">0</div></div>
+      <div><div class="card-title">Net Profit</div><div class="card-value green" id="pb-net">0</div></div>
+    </div>
+  </div>
+  <div style="border:2px solid var(--accent);border-radius:var(--r2);padding:18px;background:linear-gradient(135deg,#1a1200 0%,#1a1a1a 100%)" class="section-gap">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <span style="font-size:24px">🏦</span>
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--accent)">Business Net Worth — Right Now</div>
+        <div style="font-size:12px;color:var(--text3)">Everything the business owns minus what it owes · updates live</div>
+      </div>
+    </div>
+    <div style="background:#1f1600;border:1px solid #5a3d00;border-radius:var(--r2);padding:18px;margin:14px 0;text-align:center">
+      <div style="font-size:13px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Total Business Value</div>
+      <div id="nw-big-number" style="font-size:42px;font-weight:800;color:var(--accent2);line-height:1">TZS 0</div>
+      <div id="nw-big-formula" style="font-size:12px;color:var(--text3);margin-top:8px">Assets − Liabilities</div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">✅ What You Own (Assets)</div>
+      <div id="nw-assets-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#0d1f16;border-radius:var(--r);margin-top:6px;font-weight:700">
+        <span style="color:var(--green)">Total Assets</span><span id="nw-total-assets" style="color:var(--green)">TZS 0</span>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">❌ What You Owe (Liabilities)</div>
+      <div id="nw-liabilities-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#1f0d0d;border-radius:var(--r);margin-top:6px;font-weight:700">
+        <span style="color:var(--red)">Total Liabilities</span><span id="nw-total-liabilities" style="color:var(--red)">TZS 0</span>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);text-align:center;margin-top:4px">💡 Go to the <strong style="color:var(--accent)">Assets</strong> tab to record furniture, equipment, cash in till, bank balance and debts</div>
+  </div>
+</div>
+
+<!-- SELL -->
+<div id="page-sell" class="page">
+  <div class="sec-header"><div class="sec-title">New Sale</div></div>
+  <div class="card section-gap">
+    <div class="form-group" style="margin-bottom:10px">
+      <input type="text" id="sale-search" placeholder="🔍  Search product name..." oninput="filterSaleProducts()" style="font-size:16px;padding:14px">
+    </div>
+    <div id="sale-product-list" style="max-height:280px;overflow-y:auto"></div>
+  </div>
+  <div class="card section-gap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="sec-title" style="font-size:18px">🛒 Cart</div>
+      <button class="btn btn-sm btn-ghost" onclick="clearCart()">Clear All</button>
+    </div>
+    <div id="sale-cart"></div>
+    <div style="border-top:2px solid var(--border);margin-top:12px;padding-top:14px">
+      <div style="display:flex;justify-content:space-between;font-size:28px;font-weight:800;color:var(--accent)"><span>TOTAL</span><span id="cart-total">TZS 0</span></div>
+    </div>
+  </div>
+  <div class="card section-gap">
+    <div class="sec-title" style="font-size:18px;margin-bottom:14px">💳 Payment</div>
+    <div class="form-group"><label>Customer Name (optional)</label><input type="text" id="sale-customer" placeholder="Walk-in customer"></div>
+    <div class="form-group"><label>Payment Method</label>
+      <select id="sale-payment">
+        <option value="cash">💵 Cash</option>
+        <option value="mpesa">📱 M-Pesa / Mobile Money</option>
+        <option value="bank">🏦 Bank Transfer</option>
+        <option value="instalment">📋 Instalment (Pay Later)</option>
+      </select>
+    </div>
+    <div id="instalment-fields" style="display:none">
+      <div class="form-group"><label>Deposit Amount Now (TZS)</label><input type="number" id="sale-deposit" placeholder="0"></div>
+      <div class="form-group"><label>Number of Instalments</label><input type="number" id="sale-inst-count" placeholder="e.g. 3" min="2"></div>
+    </div>
+    <button class="btn btn-accent" style="width:100%;font-size:18px;padding:16px;margin-top:4px" onclick="completeSale()">✅ Complete Sale</button>
+  </div>
+</div>
+
+<!-- INVENTORY -->
+<div id="page-inventory" class="page">
+  <div class="sec-header">
+    <div class="sec-title">Inventory</div>
+    <button class="btn btn-accent" onclick="openModal('modal-add-product')">+ Add Product</button>
+  </div>
+  <div class="form-group" style="max-width:320px;margin-bottom:16px"><input type="text" id="inv-search" placeholder="Search products..." oninput="renderInventory()"></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Product</th><th>Category</th><th>Buy Price</th><th>Sell Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead><tbody id="inventory-body"></tbody></table></div></div>
+</div>
+
+<!-- PURCHASES -->
+<div id="page-purchases" class="page">
+  <div class="sec-header">
+    <div class="sec-title">Stock Purchases</div>
+    <button class="btn btn-accent" onclick="openModal('modal-add-purchase')">+ Record Purchase</button>
+  </div>
+  <div class="card section-gap"><div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Supplier</th><th>Product</th><th>Qty</th><th>Unit Cost</th><th>Total</th><th>Actions</th></tr></thead><tbody id="purchases-body"></tbody></table></div></div>
+</div>
+
+<!-- EXPENSES -->
+<div id="page-expenses" class="page">
+  <div class="sec-header">
+    <div class="sec-title">Expenses</div>
+    <button class="btn btn-accent" onclick="openModal('modal-add-expense')">+ Add Expense</button>
+  </div>
+  <div class="grid-3 section-gap">
+    <div class="card"><div class="card-title">This Month</div><div class="card-value red" id="exp-month">TZS 0</div></div>
+    <div class="card"><div class="card-title">This Year</div><div class="card-value red" id="exp-year">TZS 0</div></div>
+    <div class="card"><div class="card-title">Total Records</div><div class="card-value" id="exp-count">0</div></div>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Actions</th></tr></thead><tbody id="expenses-body"></tbody></table></div></div>
+</div>
+
+<!-- INSTALMENTS -->
+<div id="page-instalments" class="page">
+  <div class="sec-header"><div class="sec-title">Instalment Plans</div></div>
+  <div class="grid-3 section-gap">
+    <div class="card"><div class="card-title">Active Plans</div><div class="card-value accent" id="inst-active">0</div></div>
+    <div class="card"><div class="card-title">Outstanding</div><div class="card-value red" id="inst-outstanding">TZS 0</div></div>
+    <div class="card"><div class="card-title">Collected</div><div class="card-value green" id="inst-collected">TZS 0</div></div>
+  </div>
+  <div id="instalments-list"></div>
+</div>
+
+<!-- REPORTS -->
+<div id="page-reports" class="page">
+  <div class="sec-header"><div class="sec-title">Reports & Accounts</div></div>
+  <div class="period-tabs">
+    <button class="period-tab active" onclick="setReportPeriod('today',this)">Today</button>
+    <button class="period-tab" onclick="setReportPeriod('week',this)">This Week</button>
+    <button class="period-tab" onclick="setReportPeriod('month',this)">This Month</button>
+    <button class="period-tab" onclick="setReportPeriod('year',this)">This Year</button>
+  </div>
+  <div class="grid-4 section-gap" id="report-summary"></div>
+  <div class="grid-2 section-gap">
+    <div class="card"><div class="sec-title" style="font-size:16px;margin-bottom:12px">📒 Income Statement</div><div id="report-income"></div></div>
+    <div class="card"><div class="sec-title" style="font-size:16px;margin-bottom:12px">📊 Sales by Category</div><div id="report-by-cat"></div></div>
+  </div>
+  <div style="border:2px solid var(--accent);border-radius:var(--r2);padding:18px;background:linear-gradient(135deg,#1a1200 0%,#1a1a1a 100%)" class="section-gap">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <span style="font-size:24px">🏦</span>
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--accent)">Business Net Worth — Right Now</div>
+        <div style="font-size:12px;color:var(--text3)">Not filtered by period above · shows your business right now</div>
+      </div>
+    </div>
+    <div style="background:#1f1600;border:1px solid #5a3d00;border-radius:var(--r2);padding:18px;margin:14px 0;text-align:center">
+      <div style="font-size:13px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Total Business Value</div>
+      <div id="rpt-nw-big-number" style="font-size:42px;font-weight:800;color:var(--accent2);line-height:1">TZS 0</div>
+      <div id="rpt-nw-formula" style="font-size:12px;color:var(--text3);margin-top:8px">Assets − Liabilities</div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">✅ What You Own (Assets)</div>
+      <div id="rpt-nw-assets-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#0d1f16;border-radius:var(--r);margin-top:6px;font-weight:700">
+        <span style="color:var(--green)">Total Assets</span><span id="rpt-nw-total-assets" style="color:var(--green)">TZS 0</span>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">❌ What You Owe (Liabilities)</div>
+      <div id="rpt-nw-liabilities-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#1f0d0d;border-radius:var(--r);margin-top:6px;font-weight:700">
+        <span style="color:var(--red)">Total Liabilities</span><span id="rpt-nw-total-liabilities" style="color:var(--red)">TZS 0</span>
+      </div>
+    </div>
+  </div>
+  <div class="card section-gap">
+    <div class="sec-title" style="font-size:16px;margin-bottom:12px">📋 Transaction Ledger</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Description</th><th>In (+)</th><th>Out (-)</th><th>Balance</th></tr></thead><tbody id="report-ledger"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ASSETS -->
+<div id="page-assets" class="page">
+  <div class="sec-header">
+    <div class="sec-title">🏷️ Assets & Liabilities</div>
+    <button class="btn btn-accent" onclick="openAddAssetModal()">+ Add Item</button>
+  </div>
+  <div class="alert alert-orange">💡 <strong>What goes here?</strong> Record everything the business physically owns (furniture, equipment, tools, cash in till, bank balance) and anything it owes (supplier debt, loans). This makes your Net Worth accurate.</div>
+  <div class="grid-3 section-gap">
+    <div class="card"><div class="card-title">✅ Total Assets</div><div class="card-value green" id="asset-total-value">TZS 0</div><div class="card-sub" id="asset-count">0 items recorded</div></div>
+    <div class="card"><div class="card-title">❌ Total Liabilities</div><div class="card-value red" id="liab-total-value">TZS 0</div><div class="card-sub" id="liab-count">0 items recorded</div></div>
+    <div class="card" style="border-color:var(--accent)"><div class="card-title">🏦 Net Position</div><div class="card-value accent" id="asset-net-position">TZS 0</div><div class="card-sub">Assets minus Liabilities</div></div>
+  </div>
+  <div class="card section-gap">
+    <div style="font-size:16px;font-weight:700;color:var(--green);margin-bottom:12px">✅ Assets — Things You Own</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Item</th><th>Category</th><th>Value (TZS)</th><th>Note</th><th>Actions</th></tr></thead><tbody id="assets-body"></tbody></table></div>
+  </div>
+  <div class="card section-gap">
+    <div style="font-size:16px;font-weight:700;color:var(--red);margin-bottom:12px">❌ Liabilities — Things You Owe</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Item</th><th>Category</th><th>Amount Owed (TZS)</th><th>Note</th><th>Actions</th></tr></thead><tbody id="liabilities-body"></tbody></table></div>
+  </div>
+</div>
+
+<!-- RECEIPTS -->
+<div id="page-receipts" class="page">
+  <div class="sec-header"><div class="sec-title">Sales Receipts</div></div>
+  <div class="form-group" style="max-width:320px;margin-bottom:16px"><input type="text" id="rec-search" placeholder="Search by customer or date..." oninput="renderReceiptsPage()"></div>
+  <div id="receipts-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+</div>
+</main>
+
+<!-- Add Product -->
+<div id="modal-add-product" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="modal-title">Add New Product</div>
+    <div class="form-group"><label>Product Name *</label><input type="text" id="p-name" placeholder="e.g. Brake Pad Honda CBX"></div>
+    <div class="form-group"><label>Category</label><select id="p-cat"><option>Engine Parts</option><option>Brakes</option><option>Electrical</option><option>Body Parts</option><option>Oils & Fluids</option><option>Tyres</option><option>Chain & Sprocket</option><option>Filters</option><option>Other</option></select></div>
+    <div class="form-group"><label>Buy Price (TZS) — What you paid *</label><input type="number" id="p-buy" placeholder="0"></div>
+    <div class="form-group"><label>Sell Price (TZS) — What you charge customers *</label><input type="number" id="p-sell" placeholder="0"></div>
+    <div class="form-group"><label>Current Stock Quantity *</label><input type="number" id="p-stock" placeholder="0"></div>
+    <div class="form-group"><label>Low Stock Alert When Below</label><input type="number" id="p-low" placeholder="5" value="5"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-add-product')">Cancel</button><button class="btn btn-accent" onclick="addProduct()">Save Product</button></div>
+  </div>
+</div>
+
+<!-- Edit Product -->
+<div id="modal-edit-product" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="modal-title">Edit Product</div>
+    <input type="hidden" id="ep-id">
+    <div class="form-group"><label>Product Name</label><input type="text" id="ep-name"></div>
+    <div class="form-group"><label>Category</label><select id="ep-cat"><option>Engine Parts</option><option>Brakes</option><option>Electrical</option><option>Body Parts</option><option>Oils & Fluids</option><option>Tyres</option><option>Chain & Sprocket</option><option>Filters</option><option>Other</option></select></div>
+    <div class="form-group"><label>Buy Price (TZS)</label><input type="number" id="ep-buy"></div>
+    <div class="form-group"><label>Sell Price (TZS)</label><input type="number" id="ep-sell"></div>
+    <div class="form-group"><label>Stock Quantity</label><input type="number" id="ep-stock"></div>
+    <div class="form-group"><label>Low Stock Alert Threshold</label><input type="number" id="ep-low"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-edit-product')">Cancel</button><button class="btn btn-accent" onclick="saveEditProduct()">Save Changes</button></div>
+  </div>
+</div>
+
+<!-- Add Purchase -->
+<div id="modal-add-purchase" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="modal-title">Record Stock Purchase</div>
+    <div class="form-group"><label>Supplier Name</label><input type="text" id="pur-supplier" placeholder="Supplier / Wholesaler"></div>
+    <div class="form-group"><label>Product *</label><select id="pur-product"></select></div>
+    <div class="form-group"><label>Quantity Bought *</label><input type="number" id="pur-qty" placeholder="0"></div>
+    <div class="form-group"><label>Unit Cost (TZS) *</label><input type="number" id="pur-cost" placeholder="Cost per item"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-add-purchase')">Cancel</button><button class="btn btn-accent" onclick="addPurchase()">Record Purchase</button></div>
+  </div>
+</div>
+
+<!-- Edit Purchase -->
+<div id="modal-edit-purchase" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="modal-title">Edit Purchase</div>
+    <input type="hidden" id="epur-id">
+    <div class="form-group"><label>Supplier Name</label><input type="text" id="epur-supplier"></div>
+    <div class="form-group"><label>Quantity</label><input type="number" id="epur-qty"></div>
+    <div class="form-group"><label>Unit Cost (TZS)</label><input type="number" id="epur-cost"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-edit-purchase')">Cancel</button><button class="btn btn-accent" onclick="saveEditPurchase()">Save Changes</button></div>
+  </div>
+</div>
+
+<!-- Add Expense -->
+<div id="modal-add-expense" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="modal-title">Add Expense</div>
+    <div class="form-group"><label>Category</label><select id="exp-cat"><option>Rent</option><option>Salaries</option><option>Electricity</option><option>Transport</option><option>Packaging</option><option>Marketing</option><option>Equipment</option><option>Other</option></select></div>
+    <div class="form-group"><label>Description</label><input type="text" id="exp-desc" placeholder="What was the expense for?"></div>
+    <div class="form-group"><label>Amount (TZS) *</label><input type="number" id="exp-amount" placeholder="0"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-add-expense')">Cancel</button><button class="btn btn-accent" onclick="addExpense()">Save Expense</button></div>
+  </div>
+</div>
+
+<!-- Edit Expense -->
+<div id="modal-edit-expense" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="modal-title">Edit Expense</div>
+    <input type="hidden" id="eexp-id">
+    <div class="form-group"><label>Category</label><select id="eexp-cat"><option>Rent</option><option>Salaries</option><option>Electricity</option><option>Transport</option><option>Packaging</option><option>Marketing</option><option>Equipment</option><option>Other</option></select></div>
+    <div class="form-group"><label>Description</label><input type="text" id="eexp-desc"></div>
+    <div class="form-group"><label>Amount (TZS)</label><input type="number" id="eexp-amount"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-edit-expense')">Cancel</button><button class="btn btn-accent" onclick="saveEditExpense()">Save Changes</button></div>
+  </div>
+</div>
+
+<!-- Instalment Payment -->
+<div id="modal-inst-pay" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="modal-title">Record Payment</div>
+    <input type="hidden" id="inst-pay-id">
+    <div class="form-group"><label>Amount Paid (TZS)</label><input type="number" id="inst-pay-amount" placeholder="0"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-inst-pay')">Cancel</button><button class="btn btn-accent" onclick="recordInstalmentPayment()">Record Payment</button></div>
+  </div>
+</div>
+
+<!-- Edit Instalment -->
+<div id="modal-edit-instalment" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="modal-title">Edit Instalment Plan</div>
+    <input type="hidden" id="einst-id">
+    <div class="form-group"><label>Customer Name</label><input type="text" id="einst-customer"></div>
+    <div class="form-group"><label>Items / Description</label><input type="text" id="einst-items"></div>
+    <div class="form-group"><label>Total Amount (TZS)</label><input type="number" id="einst-total"></div>
+    <div class="form-group"><label>Amount Already Paid (TZS)</label><input type="number" id="einst-paid"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-edit-instalment')">Cancel</button><button class="btn btn-accent" onclick="saveEditInstalment()">Save Changes</button></div>
+  </div>
+</div>
+
+<!-- Receipt View -->
+<div id="modal-receipt" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:360px">
+    <div id="receipt-content"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-receipt')">Close</button><button class="btn btn-accent" onclick="printReceipt()">🖨️ Print</button></div>
+  </div>
+</div>
+
+<!-- Edit Sale -->
+<div id="modal-edit-sale" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-title">Edit Sale</div>
+    <input type="hidden" id="esale-id">
+    <div class="form-group"><label>Customer Name</label><input type="text" id="esale-customer"></div>
+    <div class="form-group"><label>Payment Method</label><select id="esale-payment"><option value="cash">Cash</option><option value="mpesa">M-Pesa / Mobile</option><option value="bank">Bank Transfer</option><option value="instalment">Instalment</option></select></div>
+    <div style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2);margin-bottom:8px;display:block">Sale Items — adjust quantities or remove items</label><div id="esale-items-list"></div></div>
+    <div style="padding:10px;background:var(--surface2);border-radius:var(--r);margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-weight:700;color:var(--accent)"><span>New Total</span><span id="esale-total-display">TZS 0</span></div></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-edit-sale')">Cancel</button><button class="btn btn-accent" onclick="saveEditSale()">Save Changes</button></div>
+  </div>
+</div>
+
+<!-- Add Asset -->
+<div id="modal-add-asset" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="modal-title" id="asset-modal-title">Add Asset or Liability</div>
+    <input type="hidden" id="asset-id">
+    <div class="form-group"><label>Type</label><select id="asset-type" onchange="updateAssetCategories()"><option value="asset">✅ Asset — Something I Own</option><option value="liability">❌ Liability — Something I Owe</option></select></div>
+    <div class="form-group"><label>Category</label><select id="asset-cat"><option>Furniture & Fixtures</option><option>Equipment & Tools</option><option>Electronics & Devices</option><option>Cash in Till</option><option>Bank Balance</option><option>Vehicle</option><option>Other Asset</option></select></div>
+    <div class="form-group"><label>Item Name *</label><input type="text" id="asset-name" placeholder="e.g. Display shelf, Android tablet, Generator"></div>
+    <div class="form-group"><label id="asset-value-label">Value (TZS) *</label><input type="number" id="asset-value" placeholder="0"></div>
+    <div class="form-group"><label>Note (optional)</label><input type="text" id="asset-note" placeholder="e.g. Bought Jan 2024, owed to Juma supplier"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-add-asset')">Cancel</button><button class="btn btn-accent" onclick="saveAsset()">Save</button></div>
+  </div>
+</div>
+
+<script>
+// ==================== FIREBASE CONFIG (REST API — no SDK needed) ====================
+const FIREBASE_PROJECT = 'jbs-spare-parts';
+const FIREBASE_API_KEY = 'AIzaSyD2Vvt6DA6G3IOTh3taFu7jBv53FR5Pc0E';
+const FS_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents`;
+
+// Sync status
+function setSyncStatus(state, msg) {
+  const el = document.getElementById('sync-indicator');
+  if (!el) return;
+  el.className = state;
+  el.textContent = msg;
+}
+
+// ==================== FIREBASE SYNC ENGINE (REST API) ====================
+// Convert JS value to Firestore field value format
+function toFS(val) {
+  if (val === null || val === undefined) return {nullValue: null};
+  if (typeof val === 'boolean') return {booleanValue: val};
+  if (typeof val === 'number') return Number.isInteger(val) ? {integerValue: String(val)} : {doubleValue: val};
+  if (typeof val === 'string') return {stringValue: val};
+  if (Array.isArray(val)) return {arrayValue: {values: val.map(toFS)}};
+  if (typeof val === 'object') return {mapValue: {fields: Object.fromEntries(Object.entries(val).map(([k,v])=>[k,toFS(v)]))}};
+  return {stringValue: String(val)};
+}
+
+// Convert Firestore field value back to JS
+function fromFS(fv) {
+  if (!fv) return null;
+  if ('nullValue' in fv) return null;
+  if ('booleanValue' in fv) return fv.booleanValue;
+  if ('integerValue' in fv) return parseInt(fv.integerValue);
+  if ('doubleValue' in fv) return fv.doubleValue;
+  if ('stringValue' in fv) return fv.stringValue;
+  if ('arrayValue' in fv) return (fv.arrayValue.values||[]).map(fromFS);
+  if ('mapValue' in fv) return Object.fromEntries(Object.entries(fv.mapValue.fields||{}).map(([k,v])=>[k,fromFS(v)]));
+  return null;
+}
+
+async function syncToCloud(collection, data) {
+  if (!navigator.onLine) return;
+  try {
+    setSyncStatus('syncing', '⏳ Saving...');
+    const url = `${FS_BASE}/${collection}/data?key=${FIREBASE_API_KEY}`;
+    const body = JSON.stringify({
+      fields: {
+        items: toFS(data),
+        updated: toFS(new Date().toISOString())
+      }
+    });
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    setSyncStatus('synced', '☁️ Synced');
+  } catch(e) {
+    setSyncStatus('error', '⚠️ Sync error');
+    console.error('Sync error:', collection, e.message);
+  }
+}
+
+async function loadFromCloud(collection) {
+  try {
+    const url = `${FS_BASE}/${collection}/data?key=${FIREBASE_API_KEY}`;
+    const res = await fetch(url);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const doc = await res.json();
+    if (doc.fields && doc.fields.items) return fromFS(doc.fields.items);
+    return null;
+  } catch(e) {
+    console.error('Load error:', collection, e.message);
+    return null;
+  }
+}
+
+async function syncAll() {
+  if (!navigator.onLine) { setSyncStatus('error', '● Offline'); return; }
+  try {
+    await Promise.all([
+      syncToCloud('products', products),
+      syncToCloud('sales', sales),
+      syncToCloud('purchases', purchases),
+      syncToCloud('expenses', expenses),
+      syncToCloud('instalments', instalments),
+      syncToCloud('assets', assetItems)
+    ]);
+  } catch(e) {
+    // Silent fail — app works fine without sync
+    setSyncStatus('error', '⚠️ Sync error');
+  }
+}
+
+// ==================== LOCAL DB (localStorage fallback) ====================
+const DB = {
+  get(k){try{return JSON.parse(localStorage.getItem('jbs_'+k))||[];}catch{return[];}},
+  set(k,v){localStorage.setItem('jbs_'+k,JSON.stringify(v));}
+};
+let products=DB.get('products'), sales=DB.get('sales'), purchases=DB.get('purchases'),
+    expenses=DB.get('expenses'), instalments=DB.get('instalments'), assetItems=DB.get('assets');
+
+function save(){
+  // Always save to localStorage first (instant, works offline)
+  DB.set('products',products);DB.set('sales',sales);DB.set('purchases',purchases);
+  DB.set('expenses',expenses);DB.set('instalments',instalments);
+  // Then sync to Firebase in background (non-blocking)
+  syncAll();
+}
+function saveAssets(){
+  DB.set('assets',assetItems);
+  syncToCloud('assets',assetItems);
+}
+
+// Seed real JBS products — replace demo data if detected
+const _demo=['Brake Pad Honda CG125','Engine Oil 4T 1L','Air Filter Yamaha FZ'];
+if(products.length===0||products.some(p=>_demo.includes(p.name))){
+  products=[
+{ id: uid(), name: 'Ajast Chain', cat: 'Chain & Sprocket', buy: 1200, sell: 2500, stock: 0, low: 3 },
+    { id: uid(), name: 'Bearings 6202', cat: 'Engine Parts', buy: 1000, sell: 2000, stock: 0, low: 3 },
+    { id: uid(), name: 'Bearings 6204', cat: 'Engine Parts', buy: 1200, sell: 2500, stock: 0, low: 3 },
+    { id: uid(), name: 'Bearings 6301', cat: 'Engine Parts', buy: 1000, sell: 2000, stock: 0, low: 3 },
+    { id: uid(), name: 'Bearings 6302', cat: 'Engine Parts', buy: 1200, sell: 2500, stock: 0, low: 3 },
+    { id: uid(), name: 'Bendex', cat: 'Electrical', buy: 4000, sell: 6000, stock: 0, low: 3 },
+    { id: uid(), name: 'Boot Rubber GN', cat: 'Engine Parts', buy: 3500, sell: 5000, stock: 0, low: 3 },
+    { id: uid(), name: 'Brake Switch R', cat: 'Brakes', buy: 600, sell: 1500, stock: 0, low: 3 },
+    { id: uid(), name: 'Brake Haram', cat: 'Brakes', buy: 1500, sell: 3000, stock: 0, low: 3 },
+    { id: uid(), name: 'Brake Pad', cat: 'Brakes', buy: 1100, sell: 2000, stock: 0, low: 3 },
+    { id: uid(), name: 'Brake Rod', cat: 'Brakes', buy: 1200, sell: 2000, stock: 0, low: 3 },
+    { id: uid(), name: 'Brake Shoe Sinoray', cat: 'Brakes', buy: 2200, sell: 4000, stock: 0, low: 3 },
+    { id: uid(), name: 'Bulb Holder Nyuma', cat: 'Electrical', buy: 600, sell: 1500, stock: 0, low: 3 },
+    { id: uid(), name: 'Bulb Holder Mbele', cat: 'Electrical', buy: 600, sell: 1500, stock: 0, low: 3 },
+    { id: uid(), name: 'Bulb Indicator', cat: 'Electrical', buy: 150, sell: 300, stock: 0, low: 3 },
+    { id: uid(), name: 'Bulb Mbele Rahisi', cat: 'Electrical', buy: 1200, sell: 2000, stock: 0, low: 3 },
+    { id: uid(), name: 'Bulb R', cat: 'Electrical', buy: 200, sell: 500, stock: 0, low: 3 },
+    { id: uid(), name: 'Cam Shaft YUAO', cat: 'Engine Parts', buy: 9500, sell: 12000, stock: 0, low: 3 },
+    { id: uid(), name: 'Carburetor', cat: 'Engine Parts', buy: 13000, sell: 17000, stock: 0, low: 3 },
+    { id: uid(), name: 'CDI', cat: 'Electrical', buy: 2500, sell: 5000, stock: 0, low: 3 },
+    { id: uid(), name: 'Chain GN', cat: 'Chain & Sprocket', buy: 7000, sell: 10000, stock: 0, low: 3 },
+    { id: uid(), name: 'Chain Kit Sinoray', cat: 'Chain & Sprocket', buy: 17000, sell: 25000, stock: 0, low: 3 },
+    { id: uid(), name: 'Clutch Cable', cat: 'Engine Parts', buy: 1500, sell: 3000, stock: 0, low: 3 },
+    { id: uid(), name: 'Clutch Cable 125', cat: 'Engine Parts', buy: 1500, sell: 2500, stock: 0, low: 3 },
+    { id: uid(), name: 'Clutch Center', cat: 'Engine Parts', buy: 10000, sell: 15000, stock: 0, low: 3 },
+    { id: uid(), name: 'Clutch Housing ⚠️CHECK SELL PRICE', cat: 'Engine Parts', buy: 9000, sell: 9000, stock: 0, low: 3 },
+    { id: uid(), name: 'Clutch Plate 150', cat: 'Engine Parts', buy: 3000, sell: 5000, stock: 0, low: 3 },
+    { id: uid(), name: 'Clutch Wire GN', cat: 'Engine Parts', buy: 500, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Deep Stick (Oil Dipstick)', cat: 'Engine Parts', buy: 500, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Dumu Petrol (Fuel Tank) ⚠️CHECK SELL PRICE', cat: 'Body Parts', buy: 85000, sell: 85000, stock: 0, low: 3 },
+    { id: uid(), name: 'Excel Kiuno (Rim Center)', cat: 'Body Parts', buy: 1700, sell: 3000, stock: 0, low: 3 },
+    { id: uid(), name: 'Excel Mbele (Front Rim)', cat: 'Body Parts', buy: 1500, sell: 3000, stock: 0, low: 3 },
+    { id: uid(), name: 'Excel Nyuma (Rear Rim)', cat: 'Body Parts', buy: 1700, sell: 3000, stock: 0, low: 3 },
+    { id: uid(), name: 'Accelerator Cable', cat: 'Engine Parts', buy: 1300, sell: 2500, stock: 0, low: 3 },
+    { id: uid(), name: 'Foot Rest Front', cat: 'Body Parts', buy: 7000, sell: 10000, stock: 0, low: 3 },
+    { id: uid(), name: 'Fuse Box', cat: 'Electrical', buy: 500, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Fuse (per box)', cat: 'Electrical', buy: 3500, sell: 3500, stock: 0, low: 3 },
+    { id: uid(), name: 'Gasket Block', cat: 'Engine Parts', buy: 500, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Gasket Clutch', cat: 'Engine Parts', buy: 500, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Gasket Coil', cat: 'Engine Parts', buy: 500, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Gasket Full 150', cat: 'Engine Parts', buy: 2500, sell: 4000, stock: 0, low: 3 },
+    { id: uid(), name: 'Gasket Moto', cat: 'Engine Parts', buy: 500, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Gear Box ⚠️CHECK SELL PRICE', cat: 'Engine Parts', buy: 17500, sell: 17500, stock: 0, low: 3 },
+    { id: uid(), name: 'Gear Lever P1', cat: 'Engine Parts', buy: 1500, sell: 3000, stock: 0, low: 3 },
+    { id: uid(), name: 'Gear Lever P2', cat: 'Engine Parts', buy: 3500, sell: 5000, stock: 0, low: 3 },
+    { id: uid(), name: 'Gololi Bendex', cat: 'Electrical', buy: 1000, sell: 2000, stock: 0, low: 3 },
+    { id: uid(), name: 'Grease 1KG', cat: 'Oils & Fluids', buy: 9000, sell: 9000, stock: 0, low: 3 },
+    { id: uid(), name: 'Handle Brake GN', cat: 'Body Parts', buy: 1200, sell: 2000, stock: 0, low: 3 },
+    { id: uid(), name: 'Handle Clutch GN', cat: 'Body Parts', buy: 1200, sell: 2000, stock: 0, low: 3 },
+    { id: uid(), name: 'Handle Clutch New', cat: 'Body Parts', buy: 1500, sell: 3000, stock: 0, low: 3 },
+    { id: uid(), name: 'Handle Switch', cat: 'Electrical', buy: 10000, sell: 16500, stock: 0, low: 3 },
+    { id: uid(), name: 'Horn Ndogo (Small Horn)', cat: 'Electrical', buy: 2000, sell: 3000, stock: 0, low: 3 },
+    { id: uid(), name: 'Ignition Coil', cat: 'Electrical', buy: 3500, sell: 6000, stock: 0, low: 3 },
+    { id: uid(), name: 'Indicator', cat: 'Electrical', buy: 2500, sell: 3000, stock: 0, low: 3 },
+    { id: uid(), name: 'Kick Shaft', cat: 'Engine Parts', buy: 6000, sell: 12000, stock: 0, low: 3 },
+    { id: uid(), name: 'Kick Starter GN', cat: 'Engine Parts', buy: 4500, sell: 6000, stock: 0, low: 3 },
+    { id: uid(), name: 'Koki Oil No.24', cat: 'Oils & Fluids', buy: 500, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Brake Fluid (Mafuta ya Brake)', cat: 'Oils & Fluids', buy: 1700, sell: 2500, stock: 0, low: 3 },
+    { id: uid(), name: 'Magneto Coil', cat: 'Electrical', buy: 9500, sell: 15000, stock: 0, low: 3 },
+    { id: uid(), name: 'Tank Cap (Mfuniko Tank)', cat: 'Body Parts', buy: 3500, sell: 5000, stock: 0, low: 3 },
+    { id: uid(), name: 'Mirror Holder New', cat: 'Body Parts', buy: 1500, sell: 3000, stock: 0, low: 3 },
+    { id: uid(), name: 'Nali Chuma (Metal Nut)', cat: 'Engine Parts', buy: 500, sell: 1500, stock: 0, low: 3 },
+    { id: uid(), name: 'Nati No 17/19 (Nut 17/19)', cat: 'Engine Parts', buy: 300, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Oil Oryx', cat: 'Oils & Fluids', buy: 7400, sell: 9000, stock: 0, low: 3 },
+    { id: uid(), name: 'Oil Total', cat: 'Oils & Fluids', buy: 8750, sell: 10000, stock: 0, low: 3 },
+    { id: uid(), name: 'OKO Big (Tyre 2.75)', cat: 'Tyres', buy: 2500, sell: 4000, stock: 0, low: 3 },
+    { id: uid(), name: 'Opena Gear (Gear Opener)', cat: 'Engine Parts', buy: 3500, sell: 7000, stock: 0, low: 3 },
+    { id: uid(), name: 'Piston Kit 150', cat: 'Engine Parts', buy: 6500, sell: 9000, stock: 0, low: 3 },
+    { id: uid(), name: 'Plug Sinoray (Spark Plug)', cat: 'Engine Parts', buy: 1500, sell: 3000, stock: 0, low: 3 },
+    { id: uid(), name: 'Plug P (Spark Plug P)', cat: 'Engine Parts', buy: 1000, sell: 2000, stock: 0, low: 3 },
+    { id: uid(), name: 'Pump T (Tyre Pump)', cat: 'Body Parts', buy: 4000, sell: 6000, stock: 0, low: 3 },
+    { id: uid(), name: 'Rectifier', cat: 'Electrical', buy: 3500, sell: 5000, stock: 0, low: 3 },
+    { id: uid(), name: 'Relay', cat: 'Electrical', buy: 3500, sell: 5000, stock: 0, low: 3 },
+    { id: uid(), name: 'Ring Piston 150', cat: 'Engine Parts', buy: 2500, sell: 4000, stock: 0, low: 3 },
+    { id: uid(), name: 'Rola Pipe Black', cat: 'Body Parts', buy: 7000, sell: 7000, stock: 0, low: 3 },
+    { id: uid(), name: 'Seal 31-43', cat: 'Engine Parts', buy: 1000, sell: 2000, stock: 0, low: 3 },
+    { id: uid(), name: 'Seal 32-43', cat: 'Engine Parts', buy: 1000, sell: 2000, stock: 0, low: 3 },
+    { id: uid(), name: 'Seal 32-44', cat: 'Engine Parts', buy: 1000, sell: 2000, stock: 0, low: 3 },
+    { id: uid(), name: 'Seal Kit GN', cat: 'Engine Parts', buy: 1500, sell: 3000, stock: 0, low: 3 },
+    { id: uid(), name: 'Side Mirror King ⚠️CHECK SELL PRICE', cat: 'Body Parts', buy: 7000, sell: 7000, stock: 0, low: 3 },
+    { id: uid(), name: 'Silicon Ndogo', cat: 'Oils & Fluids', buy: 1700, sell: 2500, stock: 0, low: 3 },
+    { id: uid(), name: 'Spot Light ORG', cat: 'Electrical', buy: 15000, sell: 20000, stock: 0, low: 3 },
+    { id: uid(), name: 'Spring Brake', cat: 'Brakes', buy: 300, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Spring Stand Kubwa (Big)', cat: 'Body Parts', buy: 300, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Spring Stand Ndogo (Small)', cat: 'Body Parts', buy: 300, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Stad GN', cat: 'Body Parts', buy: 1200, sell: 2500, stock: 0, low: 3 },
+    { id: uid(), name: 'Starter Motor ⚠️CHECK SELL PRICE', cat: 'Electrical', buy: 17000, sell: 17000, stock: 0, low: 3 },
+    { id: uid(), name: 'Steering GN', cat: 'Body Parts', buy: 7000, sell: 10000, stock: 0, low: 3 },
+    { id: uid(), name: 'Stop Engine Switch', cat: 'Electrical', buy: 4000, sell: 6000, stock: 0, low: 3 },
+    { id: uid(), name: 'Switch Funguo GN (Ignition Key Switch)', cat: 'Electrical', buy: 3500, sell: 5000, stock: 0, low: 3 },
+    { id: uid(), name: 'Tail Lamp DT', cat: 'Electrical', buy: 4000, sell: 6500, stock: 0, low: 3 },
+    { id: uid(), name: 'Tail Lamp XL', cat: 'Electrical', buy: 4000, sell: 6500, stock: 0, low: 3 },
+    { id: uid(), name: 'Tapet Low YUAO', cat: 'Engine Parts', buy: 4000, sell: 6000, stock: 0, low: 3 },
+    { id: uid(), name: 'Terminal Fuse', cat: 'Electrical', buy: 700, sell: 1500, stock: 0, low: 3 },
+    { id: uid(), name: 'Terminal Red/Black', cat: 'Electrical', buy: 600, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Tube 110/16', cat: 'Tyres', buy: 5000, sell: 6500, stock: 0, low: 3 },
+    { id: uid(), name: 'Tube 300/18', cat: 'Tyres', buy: 4000, sell: 6000, stock: 0, low: 3 },
+    { id: uid(), name: 'Uzi Moto (Engine Rope)', cat: 'Engine Parts', buy: 300, sell: 500, stock: 0, low: 3 },
+    { id: uid(), name: 'Valve Inlet 150', cat: 'Engine Parts', buy: 2000, sell: 4000, stock: 0, low: 3 },
+    { id: uid(), name: 'Vikombe Shingo (Neck Cup)', cat: 'Engine Parts', buy: 3500, sell: 5000, stock: 0, low: 3 },
+    { id: uid(), name: 'Vin Tape', cat: 'Other', buy: 750, sell: 1000, stock: 0, low: 3 },
+    { id: uid(), name: 'Wiring GN (Full Wiring)', cat: 'Electrical', buy: 10000, sell: 15000, stock: 0, low: 3 },
+  ];
+  sales=[];expenses=[];instalments=[];save();
+}
+
+// Utils
+function uid(){return Math.random().toString(36).substr(2,9)+Date.now().toString(36);}
+function fmt(n){return 'TZS '+Math.round(n).toLocaleString();}
+function today(){return new Date().toISOString().split('T')[0];}
+function getWeekStart(){const d=new Date();d.setDate(d.getDate()-d.getDay());return d.toISOString().split('T')[0];}
+function getMonthStart(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';}
+function getYearStart(){return new Date().getFullYear()+'-01-01';}
+function getPeriodFilter(p){const t=today();if(p==='today')return d=>d>=t;if(p==='week')return d=>d>=getWeekStart();if(p==='month')return d=>d>=getMonthStart();if(p==='year')return d=>d>=getYearStart();return()=>true;}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+function openModal(id){if(id==='modal-add-purchase'){const sel=document.getElementById('pur-product');sel.innerHTML=products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');}document.getElementById(id).style.display='flex';}
+function closeModal(id){document.getElementById(id).style.display='none';}
+
+// Nav
+let currentPage='dashboard', dashPeriod='today', reportPeriod='today';
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b=>{if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+name+"'"))b.classList.add('active');});
+  currentPage=name; window.scrollTo(0,0); renderPage(name);
+}
+function renderPage(name){
+  if(name==='dashboard')renderDashboard();
+  if(name==='sell')renderSellPage();
+  if(name==='inventory')renderInventory();
+  if(name==='purchases')renderPurchases();
+  if(name==='expenses')renderExpenses();
+  if(name==='instalments')renderInstalments();
+  if(name==='reports')renderReports();
+  if(name==='assets'){renderAssets();renderNetWorth();}
+  if(name==='receipts')renderReceiptsPage();
+}
+function updateHeaderDate(){const d=new Date();document.getElementById('header-date').textContent=d.toLocaleDateString('en-TZ',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
+function checkOnline(){const b=document.getElementById('offline-badge');navigator.onLine?b.classList.remove('show'):b.classList.add('show');}
+function checkLowStock(){const low=products.filter(p=>p.stock<=p.low);const b=document.getElementById('low-stock-banner');if(low.length>0){b.classList.add('show');b.innerHTML=`⚠️ <strong>Low Stock Alert!</strong> ${low.length} product(s) running low: ${low.map(p=>p.name).join(', ')}. Tap to view.`;}else b.classList.remove('show');}
+
+// NET WORTH
+function calcNetWorth(){
+  const stockValue=products.reduce((a,p)=>a+p.stock*p.buy,0);
+  const stockItems=products.reduce((a,p)=>a+p.stock,0);
+  const physAssets=assetItems.filter(x=>x.type==='asset');
+  const physVal=physAssets.reduce((a,x)=>a+x.value,0);
+  const instOut=instalments.reduce((a,i)=>a+Math.max(0,i.total-i.paid),0);
+  const instColl=instalments.reduce((a,i)=>a+i.paid,0);
+  const activePlans=instalments.filter(i=>i.paid<i.total).length;
+  const totalAssets=stockValue+physVal+instOut;
+  const liabs=assetItems.filter(x=>x.type==='liability');
+  const totalLiab=liabs.reduce((a,x)=>a+x.value,0);
+  const netWorth=totalAssets-totalLiab;
+  const rev=sales.filter(s=>!s.voided).reduce((a,s)=>a+s.total,0);
+  const cogs=sales.filter(s=>!s.voided).reduce((a,s)=>a+s.cogs,0);
+  const gross=rev-cogs;
+  const exp=expenses.reduce((a,e)=>a+e.amount,0);
+  const net=gross-exp;
+  return{stockValue,stockItems,physAssets,physVal,instOut,instColl,activePlans,totalAssets,liabs,totalLiab,netWorth,rev,cogs,gross,exp,net,txCount:sales.filter(s=>!s.voided).length};
+}
+function assetRow(name,sub,value,color){return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--surface2);border-radius:var(--r);gap:8px"><div><div style="font-size:14px;font-weight:600">${name}</div><div style="font-size:12px;color:var(--text3)">${sub}</div></div><div style="font-size:16px;font-weight:700;color:${color};white-space:nowrap">${fmt(value)}</div></div>`;}
+function renderNetWorth(){
+  const nw=calcNetWorth();
+  ['nw','rpt-nw'].forEach(pre=>{
+    const big=document.getElementById(pre+'-big-number');
+    if(!big)return;
+    big.textContent=fmt(nw.netWorth);
+    big.style.color=nw.netWorth>=0?'var(--accent2)':'var(--red)';
+    const form=document.getElementById(pre+'-formula')||document.getElementById(pre+'-big-formula');
+    if(form)form.textContent=fmt(nw.totalAssets)+' assets  −  '+fmt(nw.totalLiab)+' liabilities';
+    const al=document.getElementById(pre+'-assets-list');
+    if(al){
+      let rows=[assetRow('📦 Stock on Shelf',nw.stockItems+' products',nw.stockValue,'var(--blue)')];
+      nw.physAssets.forEach(a=>rows.push(assetRow('🏷️ '+a.name,a.cat,a.value,'var(--green)')));
+      if(nw.instOut>0)rows.push(assetRow('📋 Customer Receivables',nw.activePlans+' instalment plan(s)',nw.instOut,'var(--orange)'));
+      if(rows.length===1&&nw.physAssets.length===0)rows.push('<div style="color:var(--text3);font-size:13px;padding:8px">Only stock recorded. Add cash, equipment etc. in the Assets tab.</div>');
+      al.innerHTML=rows.join('');
+    }
+    const ll=document.getElementById(pre+'-liabilities-list');
+    if(ll)ll.innerHTML=nw.liabs.length?nw.liabs.map(l=>assetRow('❌ '+l.name,l.cat,l.value,'var(--red)')).join(''):'<div style="color:var(--green);font-size:13px;padding:8px">✅ No liabilities recorded — you owe nothing!</div>';
+    const ta=document.getElementById(pre+'-total-assets');if(ta)ta.textContent=fmt(nw.totalAssets);
+    const tl=document.getElementById(pre+'-total-liabilities');if(tl)tl.textContent=fmt(nw.totalLiab);
+  });
+}
+
+// DASHBOARD
+function calcStats(period){
+  const f=getPeriodFilter(period);
+  const ps=sales.filter(s=>!s.voided&&f(s.date));
+  const pe=expenses.filter(e=>f(e.date));
+  const revenue=ps.reduce((a,s)=>a+s.total,0);
+  const cogs=ps.reduce((a,s)=>a+s.cogs,0);
+  const gross=revenue-cogs;
+  const exp=pe.reduce((a,e)=>a+e.amount,0);
+  return{revenue,cogs,gross,exp,net:gross-exp,txCount:ps.length};
+}
+function setDashPeriod(p,btn){dashPeriod=p;document.querySelectorAll('#page-dashboard .period-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderDashboard();}
+function renderDashboard(){
+  const s=calcStats(dashPeriod);
+  document.getElementById('dash-cards').innerHTML=`
+    <div class="card"><div class="card-title">💰 Revenue</div><div class="card-value accent">${fmt(s.revenue)}</div><div class="card-sub">${s.txCount} sales</div></div>
+    <div class="card"><div class="card-title">📈 Gross Profit</div><div class="card-value green">${fmt(s.gross)}</div><div class="card-sub">Margin: ${s.revenue?Math.round(s.gross/s.revenue*100):0}%</div></div>
+    <div class="card"><div class="card-title">✅ Net Profit</div><div class="card-value ${s.net>=0?'green':'red'}">${fmt(s.net)}</div><div class="card-sub">After expenses</div></div>
+    <div class="card"><div class="card-title">💸 Expenses</div><div class="card-value red">${fmt(s.exp)}</div></div>`;
+  document.getElementById('pb-revenue').textContent=fmt(s.revenue);
+  document.getElementById('pb-cogs').textContent=fmt(s.cogs);
+  document.getElementById('pb-gross').textContent=fmt(s.gross);
+  document.getElementById('pb-expenses').textContent=fmt(s.exp);
+  const netEl=document.getElementById('pb-net');netEl.textContent=fmt(s.net);netEl.className='card-value '+(s.net>=0?'green':'red');
+  const tbody=document.querySelector('#dash-recent-sales tbody');
+  const recent=[...sales].filter(s=>!s.voided).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
+  tbody.innerHTML=recent.map(s=>`<tr><td>${s.items.map(i=>i.name).join(', ').substring(0,30)}</td><td>${s.items.reduce((a,i)=>a+i.qty,0)}</td><td style="color:var(--accent)">${fmt(s.total)}</td><td style="color:var(--text2);font-size:12px">${new Date(s.date).toLocaleTimeString('en-TZ',{hour:'2-digit',minute:'2-digit'})}</td></tr>`).join('');
+  renderCharts();
+  const low=products.filter(p=>p.stock<=p.low);
+  const outOf=products.filter(p=>p.stock===0);
+  let ah='';
+  if(outOf.length)ah+=outOf.map(p=>`<div class="alert alert-red">🚫 <strong>${p.name}</strong> — OUT OF STOCK</div>`).join('');
+  ah+=low.filter(p=>p.stock>0).map(p=>`<div class="alert alert-orange">⚠️ <strong>${p.name}</strong> — Only ${p.stock} left</div>`).join('');
+  if(!ah)ah='<p style="color:var(--text3);font-size:13px">✅ All products are well-stocked.</p>';
+  document.getElementById('dash-stock-alerts').innerHTML=ah;
+  renderNetWorth();
+}
+
+// SELL
+let cart=[];
+function renderSellPage(){filterSaleProducts();renderCart();document.getElementById('sale-payment').onchange=function(){document.getElementById('instalment-fields').style.display=this.value==='instalment'?'block':'none';};}
+function filterSaleProducts(){
+  const q=document.getElementById('sale-search').value.toLowerCase();
+  const list=document.getElementById('sale-product-list');
+  const filtered=products.filter(p=>p.name.toLowerCase().includes(q)||p.cat.toLowerCase().includes(q));
+  list.innerHTML=filtered.map(p=>`
+    <div class="prod-result">
+      <div style="flex:1"><div style="font-size:15px;font-weight:700">${p.name}</div><div style="font-size:13px;color:var(--text2);margin-top:2px">${p.cat} · Stock: <strong style="color:${p.stock===0?'var(--red)':p.stock<=p.low?'var(--accent)':'var(--green)'}">${p.stock}</strong></div></div>
+      <div style="text-align:right"><div style="font-size:16px;color:var(--accent);font-weight:700">${fmt(p.sell)}</div>
+      <button class="btn btn-sm btn-accent" style="margin-top:6px;min-width:70px" onclick="addToCart('${p.id}')" ${p.stock===0?'disabled style="opacity:.35;background:var(--surface3);color:var(--text2)"':''}>${p.stock===0?'Out of Stock':'+ Add'}</button></div>
+    </div>`).join('')||'<p style="color:var(--text3);padding:12px;text-align:center">No products found</p>';
+}
+function addToCart(pid){
+  const p=products.find(x=>x.id===pid);
+  if(!p||p.stock===0)return showToast('Out of stock!');
+  const ex=cart.find(c=>c.pid===pid);
+  if(ex){if(ex.qty>=p.stock)return showToast('Not enough stock!');ex.qty++;}
+  else cart.push({pid,name:p.name,qty:1,sell:p.sell,buy:p.buy});
+  renderCart();
+}
+function renderCart(){
+  const el=document.getElementById('sale-cart');
+  if(cart.length===0){el.innerHTML='<p style="color:var(--text3);font-size:13px;text-align:center;padding:20px">No items added yet.</p>';}
+  else el.innerHTML=cart.map((c,i)=>`<div class="sale-item"><div class="sale-item-name">${c.name}</div><div style="display:flex;align-items:center;gap:6px"><button class="qty-btn" onclick="adjustQty(${i},-1)">−</button><span style="min-width:28px;text-align:center;font-size:16px;font-weight:700">${c.qty}</span><button class="qty-btn" onclick="adjustQty(${i},1)">+</button></div><div class="sale-item-price">${fmt(c.sell*c.qty)}</div><button class="sale-item-del" onclick="removeFromCart(${i})">×</button></div>`).join('');
+  document.getElementById('cart-total').textContent=fmt(cart.reduce((a,c)=>a+c.sell*c.qty,0));
+}
+function adjustQty(i,delta){const p=products.find(x=>x.id===cart[i].pid);cart[i].qty=Math.max(1,Math.min(p?p.stock:999,cart[i].qty+delta));renderCart();}
+function removeFromCart(i){cart.splice(i,1);renderCart();}
+function clearCart(){cart=[];renderCart();}
+function completeSale(){
+  if(cart.length===0)return showToast('Add items to cart first!');
+  const customer=document.getElementById('sale-customer').value||'Walk-in';
+  const payment=document.getElementById('sale-payment').value;
+  const total=cart.reduce((a,c)=>a+c.sell*c.qty,0);
+  const cogs=cart.reduce((a,c)=>a+c.buy*c.qty,0);
+  if(payment==='instalment'){
+    const deposit=parseFloat(document.getElementById('sale-deposit').value)||0;
+    const numInst=parseInt(document.getElementById('sale-inst-count').value)||2;
+    if(deposit>=total)return showToast('Deposit cannot exceed total!');
+    instalments.push({id:uid(),date:new Date().toISOString(),customer,items:cart.map(c=>c.name).join(', '),total,paid:deposit,payments:deposit>0?[{date:new Date().toISOString(),amount:deposit}]:[],numInst});
+  }
+  cart.forEach(c=>{const p=products.find(x=>x.id===c.pid);if(p)p.stock-=c.qty;});
+  const sale={id:uid(),date:new Date().toISOString(),customer,items:[...cart],total,cogs,payment};
+  sales.push(sale);save();checkLowStock();
+  document.getElementById('receipt-content').innerHTML=buildReceiptHTML(sale);
+  openModal('modal-receipt');
+  clearCart();document.getElementById('sale-customer').value='';
+  showToast('✅ Sale completed! '+fmt(total));
+}
+function buildReceiptHTML(sale){
+  const d = new Date(sale.date);
+  const dateStr = d.toLocaleDateString('en-TZ',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  const timeStr = d.toLocaleTimeString('en-TZ',{hour:'2-digit',minute:'2-digit'});
+  const payLabel = {cash:'Cash',mpesa:'M-Pesa / Mobile',bank:'Bank Transfer',instalment:'Instalment'}[sale.payment]||sale.payment;
+  const subtotal = sale.items.reduce((a,i)=>a+i.sell*i.qty,0);
+  return `<div class="receipt">
+    <div class="receipt-header">
+      <div class="receipt-logo-box"><span class="receipt-logo-icon">🔧</span></div>
+      <div class="receipt-shop-name">JBS</div>
+      <div class="receipt-shop-sub">MOTORCYCLE SPARE PARTS</div>
+    </div>
+    <div class="receipt-body">
+      <div class="receipt-meta">
+        <span style="color:#888">Date</span><strong>${dateStr}, ${timeStr}</strong>
+        <span style="color:#888">Customer</span><strong>${sale.customer}</strong>
+        <span style="color:#888">Payment</span><strong>${payLabel}</strong>
+        <span style="color:#888">Receipt</span><span class="receipt-receipt-no">#${sale.id.substring(0,8).toUpperCase()}</span>
+      </div>
+      <hr class="receipt-divider">
+      <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Items</div>
+      ${sale.items.map(i=>`
+        <div class="receipt-item">
+          <span class="receipt-item-name">${i.name}</span>
+          <span class="receipt-item-qty">x${i.qty}</span>
+          <span class="receipt-item-price">${fmt(i.sell*i.qty)}</span>
+        </div>`).join('')}
+      <div class="receipt-total-row">
+        <span class="receipt-total-label">TOTAL</span>
+        <span class="receipt-total-amount">${fmt(subtotal)}</span>
+      </div>
+    </div>
+    <div class="receipt-footer">
+      <strong>Thank you for your business!</strong><br>
+      Please come again · JBS Spare Parts
+    </div>
+  </div>`;
+}
+function printReceipt(){window.print();}
+
+// INVENTORY
+function renderInventory(){
+  const q=document.getElementById('inv-search')?document.getElementById('inv-search').value.toLowerCase():'';
+  const filtered=products.filter(p=>p.name.toLowerCase().includes(q)||p.cat.toLowerCase().includes(q));
+  document.getElementById('inventory-body').innerHTML=filtered.map(p=>{
+    const status=p.stock===0?'<span class="badge badge-red">Out of Stock</span>':p.stock<=p.low?'<span class="badge badge-orange">Low Stock</span>':'<span class="badge badge-green">In Stock</span>';
+    return `<tr><td><strong>${p.name}</strong></td><td><span class="badge badge-blue">${p.cat}</span></td><td style="color:var(--text2)">${fmt(p.buy)}</td><td style="color:var(--accent);font-weight:600">${fmt(p.sell)}</td><td><strong style="color:${p.stock===0?'var(--red)':p.stock<=p.low?'var(--accent)':'var(--green)'}">${p.stock}</strong> <span style="font-size:11px;color:var(--text3)">(min ${p.low})</span></td><td>${status}</td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm btn-ghost" onclick="editProduct('${p.id}')">✏️ Edit</button><button class="btn btn-sm btn-red" onclick="deleteProduct('${p.id}')">🗑</button></td></tr>`;
+  }).join('');
+}
+function addProduct(){
+  const name=document.getElementById('p-name').value.trim();
+  const buy=parseFloat(document.getElementById('p-buy').value);
+  const sell=parseFloat(document.getElementById('p-sell').value);
+  const stock=parseInt(document.getElementById('p-stock').value);
+  if(!name||isNaN(buy)||isNaN(sell)||isNaN(stock))return showToast('Fill in all required fields!');
+  if(sell<buy)return showToast('Sell price should be higher than buy price!');
+  products.push({id:uid(),name,cat:document.getElementById('p-cat').value,buy,sell,stock,low:parseInt(document.getElementById('p-low').value)||5});
+  save();closeModal('modal-add-product');renderInventory();checkLowStock();
+  ['p-name','p-buy','p-sell','p-stock'].forEach(id=>document.getElementById(id).value='');
+  showToast('Product added!');
+}
+function editProduct(id){
+  const p=products.find(x=>x.id===id);if(!p)return;
+  document.getElementById('ep-id').value=p.id;document.getElementById('ep-name').value=p.name;
+  document.getElementById('ep-cat').value=p.cat;document.getElementById('ep-buy').value=p.buy;
+  document.getElementById('ep-sell').value=p.sell;document.getElementById('ep-stock').value=p.stock;
+  document.getElementById('ep-low').value=p.low;openModal('modal-edit-product');
+}
+function saveEditProduct(){
+  const id=document.getElementById('ep-id').value;const p=products.find(x=>x.id===id);if(!p)return;
+  p.name=document.getElementById('ep-name').value;p.cat=document.getElementById('ep-cat').value;
+  p.buy=parseFloat(document.getElementById('ep-buy').value);p.sell=parseFloat(document.getElementById('ep-sell').value);
+  p.stock=parseInt(document.getElementById('ep-stock').value);p.low=parseInt(document.getElementById('ep-low').value);
+  save();closeModal('modal-edit-product');renderInventory();checkLowStock();showToast('Product updated!');
+}
+function deleteProduct(id){
+  if(!confirm('Delete this product? This cannot be undone.'))return;
+  products=products.filter(p=>p.id!==id);save();renderInventory();checkLowStock();showToast('Product deleted.');
+}
+
+// PURCHASES
+function renderPurchases(){
+  document.getElementById('purchases-body').innerHTML=[...purchases].sort((a,b)=>b.date.localeCompare(a.date)).map(p=>`<tr><td style="font-size:12px;color:var(--text2)">${new Date(p.date).toLocaleDateString('en-TZ')}</td><td>${p.supplier||'—'}</td><td>${p.productName}</td><td>${p.qty}</td><td style="color:var(--text2)">${fmt(p.cost)}</td><td style="color:var(--accent);font-weight:600">${fmt(p.qty*p.cost)}</td><td style="display:flex;gap:6px"><button class="btn btn-sm btn-ghost" onclick="editPurchase('${p.id}')">✏️ Edit</button><button class="btn btn-sm btn-red" onclick="deletePurchase('${p.id}')">🗑</button></td></tr>`).join('');
+}
+function addPurchase(){
+  const pid=document.getElementById('pur-product').value;
+  const qty=parseInt(document.getElementById('pur-qty').value);
+  const cost=parseFloat(document.getElementById('pur-cost').value);
+  const supplier=document.getElementById('pur-supplier').value;
+  if(!pid||isNaN(qty)||isNaN(cost))return showToast('Fill in all fields!');
+  const p=products.find(x=>x.id===pid);if(!p)return;
+  p.stock+=qty;p.buy=cost;
+  purchases.push({id:uid(),date:new Date().toISOString(),supplier,productId:pid,productName:p.name,qty,cost});
+  save();closeModal('modal-add-purchase');renderPurchases();renderInventory();checkLowStock();
+  showToast(`Stocked ${qty}x ${p.name}!`);
+}
+function editPurchase(id){
+  const p=purchases.find(x=>x.id===id);if(!p)return;
+  document.getElementById('epur-id').value=p.id;document.getElementById('epur-supplier').value=p.supplier||'';
+  document.getElementById('epur-qty').value=p.qty;document.getElementById('epur-cost').value=p.cost;
+  openModal('modal-edit-purchase');
+}
+function saveEditPurchase(){
+  const id=document.getElementById('epur-id').value;const p=purchases.find(x=>x.id===id);if(!p)return;
+  const oldQty=p.qty;const newQty=parseInt(document.getElementById('epur-qty').value);const newCost=parseFloat(document.getElementById('epur-cost').value);
+  if(isNaN(newQty)||isNaN(newCost))return showToast('Enter valid numbers!');
+  const prod=products.find(x=>x.id===p.productId);if(prod){prod.stock=prod.stock-oldQty+newQty;prod.buy=newCost;}
+  p.qty=newQty;p.cost=newCost;p.supplier=document.getElementById('epur-supplier').value;
+  save();closeModal('modal-edit-purchase');renderPurchases();renderInventory();showToast('Purchase updated!');
+}
+function deletePurchase(id){
+  const p=purchases.find(x=>x.id===id);if(!p)return;
+  if(!confirm(`Delete this purchase of ${p.qty}x ${p.productName}? Stock will be reversed.`))return;
+  const prod=products.find(x=>x.id===p.productId);if(prod)prod.stock=Math.max(0,prod.stock-p.qty);
+  purchases=purchases.filter(x=>x.id!==id);save();renderPurchases();renderInventory();checkLowStock();showToast('Purchase deleted and stock reversed.');
+}
+
+// EXPENSES
+function renderExpenses(){
+  const mExp=expenses.filter(e=>e.date>=getMonthStart()).reduce((a,e)=>a+e.amount,0);
+  const yExp=expenses.filter(e=>e.date>=getYearStart()).reduce((a,e)=>a+e.amount,0);
+  document.getElementById('exp-month').textContent=fmt(mExp);
+  document.getElementById('exp-year').textContent=fmt(yExp);
+  document.getElementById('exp-count').textContent=expenses.length;
+  document.getElementById('expenses-body').innerHTML=[...expenses].sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<tr><td style="font-size:12px;color:var(--text2)">${new Date(e.date).toLocaleDateString('en-TZ')}</td><td><span class="badge badge-orange">${e.cat}</span></td><td>${e.desc}</td><td style="color:var(--red);font-weight:600">${fmt(e.amount)}</td><td style="display:flex;gap:6px"><button class="btn btn-sm btn-ghost" onclick="editExpense('${e.id}')">✏️ Edit</button><button class="btn btn-sm btn-red" onclick="deleteExpense('${e.id}')">🗑</button></td></tr>`).join('');
+}
+function addExpense(){
+  const amount=parseFloat(document.getElementById('exp-amount').value);
+  const desc=document.getElementById('exp-desc').value.trim();
+  if(isNaN(amount)||amount<=0)return showToast('Enter a valid amount!');
+  expenses.push({id:uid(),date:new Date().toISOString(),cat:document.getElementById('exp-cat').value,desc:desc||'No description',amount});
+  save();closeModal('modal-add-expense');renderExpenses();
+  document.getElementById('exp-amount').value='';document.getElementById('exp-desc').value='';
+  showToast('Expense recorded!');
+}
+function editExpense(id){
+  const e=expenses.find(x=>x.id===id);if(!e)return;
+  document.getElementById('eexp-id').value=e.id;document.getElementById('eexp-cat').value=e.cat;
+  document.getElementById('eexp-desc').value=e.desc;document.getElementById('eexp-amount').value=e.amount;
+  openModal('modal-edit-expense');
+}
+function saveEditExpense(){
+  const id=document.getElementById('eexp-id').value;const e=expenses.find(x=>x.id===id);if(!e)return;
+  const amount=parseFloat(document.getElementById('eexp-amount').value);
+  if(isNaN(amount)||amount<=0)return showToast('Enter a valid amount!');
+  e.cat=document.getElementById('eexp-cat').value;e.desc=document.getElementById('eexp-desc').value||'No description';e.amount=amount;
+  save();closeModal('modal-edit-expense');renderExpenses();showToast('Expense updated!');
+}
+function deleteExpense(id){if(!confirm('Delete this expense record?'))return;expenses=expenses.filter(x=>x.id!==id);save();renderExpenses();showToast('Expense deleted.');}
+
+// INSTALMENTS
+function renderInstalments(){
+  const active=instalments.filter(i=>i.paid<i.total);
+  document.getElementById('inst-active').textContent=active.length;
+  document.getElementById('inst-outstanding').textContent=fmt(active.reduce((a,i)=>a+(i.total-i.paid),0));
+  document.getElementById('inst-collected').textContent=fmt(instalments.reduce((a,i)=>a+i.paid,0));
+  document.getElementById('instalments-list').innerHTML=[...instalments].sort((a,b)=>b.date.localeCompare(a.date)).map(inst=>{
+    const rem=inst.total-inst.paid;const pct=Math.round(inst.paid/inst.total*100);const isDone=rem<=0;
+    return `<div class="card section-gap"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px"><div><div style="font-size:16px;font-weight:700">${inst.customer}</div><div style="font-size:12px;color:var(--text2);margin-top:2px">${inst.items.substring(0,60)} · ${new Date(inst.date).toLocaleDateString('en-TZ')}</div></div><div style="text-align:right"><div style="font-size:13px;color:var(--text2)">Total: <strong>${fmt(inst.total)}</strong></div><div style="font-size:13px;color:${isDone?'var(--green)':'var(--red)'}">Remaining: <strong>${fmt(rem)}</strong></div></div></div><div style="margin:12px 0"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px"><span>Paid: ${fmt(inst.paid)}</span><span>${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${isDone?'<span class="badge badge-green">✅ Fully Paid</span>':`<button class="btn btn-accent" style="font-size:15px" onclick="openInstPay('${inst.id}')">+ Record Payment</button>`}<button class="btn btn-sm btn-ghost" onclick="viewInstHistory('${inst.id}')">History</button><button class="btn btn-sm btn-ghost" onclick="editInstalment('${inst.id}')">✏️ Edit</button><button class="btn btn-sm btn-red" onclick="deleteInstalment('${inst.id}')">🗑</button></div></div>`;
+  }).join('');
+}
+function openInstPay(id){document.getElementById('inst-pay-id').value=id;document.getElementById('inst-pay-amount').value='';openModal('modal-inst-pay');}
+function recordInstalmentPayment(){
+  const id=document.getElementById('inst-pay-id').value;const amount=parseFloat(document.getElementById('inst-pay-amount').value);
+  if(isNaN(amount)||amount<=0)return showToast('Enter a valid amount!');
+  const inst=instalments.find(i=>i.id===id);if(!inst)return;
+  const rem=inst.total-inst.paid;if(amount>rem)return showToast(`Max remaining is ${fmt(rem)}!`);
+  inst.paid+=amount;inst.payments.push({date:new Date().toISOString(),amount});
+  save();closeModal('modal-inst-pay');renderInstalments();showToast(`Payment of ${fmt(amount)} recorded!`);
+}
+function editInstalment(id){
+  const inst=instalments.find(x=>x.id===id);if(!inst)return;
+  document.getElementById('einst-id').value=inst.id;document.getElementById('einst-customer').value=inst.customer;
+  document.getElementById('einst-items').value=inst.items;document.getElementById('einst-total').value=inst.total;
+  document.getElementById('einst-paid').value=inst.paid;openModal('modal-edit-instalment');
+}
+function saveEditInstalment(){
+  const id=document.getElementById('einst-id').value;const inst=instalments.find(x=>x.id===id);if(!inst)return;
+  const total=parseFloat(document.getElementById('einst-total').value);const paid=parseFloat(document.getElementById('einst-paid').value);
+  if(isNaN(total)||isNaN(paid))return showToast('Enter valid amounts!');
+  if(paid>total)return showToast('Paid cannot exceed total!');
+  inst.customer=document.getElementById('einst-customer').value||inst.customer;
+  inst.items=document.getElementById('einst-items').value||inst.items;inst.total=total;inst.paid=paid;
+  save();closeModal('modal-edit-instalment');renderInstalments();showToast('Instalment plan updated!');
+}
+function deleteInstalment(id){if(!confirm('Delete this instalment plan?'))return;instalments=instalments.filter(x=>x.id!==id);save();renderInstalments();showToast('Instalment plan deleted.');}
+function viewInstHistory(id){
+  const inst=instalments.find(x=>x.id===id);if(!inst)return;
+  alert(inst.customer+"'s Payment History\n\n"+inst.payments.map((p,i)=>`${i+1}. ${new Date(p.date).toLocaleDateString('en-TZ')} — ${fmt(p.amount)}`).join('\n')+`\n\nTotal Paid: ${fmt(inst.paid)} / ${fmt(inst.total)}`);
+}
+
+// REPORTS
+function setReportPeriod(p,btn){reportPeriod=p;document.querySelectorAll('#page-reports .period-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderReports();}
+function renderReports(){
+  const s=calcStats(reportPeriod);
+  document.getElementById('report-summary').innerHTML=`
+    <div class="card"><div class="card-title">Revenue</div><div class="card-value accent">${fmt(s.revenue)}</div></div>
+    <div class="card"><div class="card-title">Gross Profit</div><div class="card-value green">${fmt(s.gross)}</div></div>
+    <div class="card"><div class="card-title">Expenses</div><div class="card-value red">${fmt(s.exp)}</div></div>
+    <div class="card"><div class="card-title">Net Profit</div><div class="card-value ${s.net>=0?'green':'red'}">${fmt(s.net)}</div></div>`;
+  document.getElementById('report-income').innerHTML=`<table style="width:100%;font-size:14px"><tr><td style="padding:6px 0;color:var(--text2)">Sales Revenue</td><td style="text-align:right;color:var(--accent);font-weight:600">${fmt(s.revenue)}</td></tr><tr><td style="padding:6px 0;color:var(--text2)">Cost of Goods Sold</td><td style="text-align:right;color:var(--red)">− ${fmt(s.cogs)}</td></tr><tr style="border-top:1px solid var(--border)"><td style="padding:8px 0;font-weight:700">Gross Profit</td><td style="text-align:right;font-weight:700;color:var(--green)">${fmt(s.gross)}</td></tr><tr><td style="padding:6px 0;color:var(--text2)">Operating Expenses</td><td style="text-align:right;color:var(--red)">− ${fmt(s.exp)}</td></tr><tr style="border-top:1px solid var(--border)"><td style="padding:8px 0;font-weight:700;font-size:16px">Net Profit</td><td style="text-align:right;font-weight:700;font-size:16px;color:${s.net>=0?'var(--green)':'var(--red)'}">${fmt(s.net)}</td></tr><tr><td style="padding:4px 0;font-size:12px;color:var(--text3)">Gross Margin</td><td style="text-align:right;font-size:12px;color:var(--text3)">${s.revenue?Math.round(s.gross/s.revenue*100):0}%</td></tr><tr><td style="padding:4px 0;font-size:12px;color:var(--text3)">Net Margin</td><td style="text-align:right;font-size:12px;color:var(--text3)">${s.revenue?Math.round(s.net/s.revenue*100):0}%</td></tr></table>`;
+  const f=getPeriodFilter(reportPeriod);
+  const ps=sales.filter(s=>!s.voided&&f(s.date));
+  const byCat={};ps.forEach(s=>s.items.forEach(item=>{const p=products.find(x=>x.id===item.pid);const cat=p?p.cat:'Other';byCat[cat]=(byCat[cat]||0)+item.sell*item.qty;}));
+  const total=Object.values(byCat).reduce((a,b)=>a+b,0);
+  const sorted=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('report-by-cat').innerHTML=sorted.length===0?'<p style="color:var(--text3);font-size:13px">No sales in this period.</p>':sorted.map(([cat,amt])=>`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>${cat}</span><span style="color:var(--accent);font-weight:600">${fmt(amt)}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${total?Math.round(amt/total*100):0}%"></div></div><div style="font-size:11px;color:var(--text3);text-align:right">${total?Math.round(amt/total*100):0}%</div></div>`).join('');
+  let ledger=[];
+  sales.filter(s=>!s.voided&&f(s.date)).forEach(s=>ledger.push({date:s.date,type:'Sale',desc:s.customer+' — '+s.items.map(i=>i.name).join(', ').substring(0,30),in:s.total,out:0}));
+  expenses.filter(e=>f(e.date)).forEach(e=>ledger.push({date:e.date,type:'Expense',desc:e.cat+': '+e.desc,in:0,out:e.amount}));
+  purchases.filter(p=>f(p.date)).forEach(p=>ledger.push({date:p.date,type:'Purchase',desc:p.productName+' x'+p.qty,in:0,out:p.qty*p.cost}));
+  ledger.sort((a,b)=>a.date.localeCompare(b.date));
+  let balance=0;
+  document.getElementById('report-ledger').innerHTML=ledger.map(row=>{balance+=row.in-row.out;return `<tr><td style="font-size:12px;color:var(--text2)">${new Date(row.date).toLocaleDateString('en-TZ')}</td><td><span class="badge ${row.type==='Sale'?'badge-green':row.type==='Expense'?'badge-red':'badge-orange'}">${row.type}</span></td><td style="font-size:12px">${row.desc.substring(0,40)}</td><td style="color:var(--green)">${row.in>0?fmt(row.in):''}</td><td style="color:var(--red)">${row.out>0?fmt(row.out):''}</td><td style="font-weight:600;color:${balance>=0?'var(--green)':'var(--red)'}">${fmt(balance)}</td></tr>`;}).join('');
+  renderNetWorth();
+}
+
+// ASSETS
+function updateAssetCategories(){
+  const type=document.getElementById('asset-type').value;
+  const cat=document.getElementById('asset-cat');
+  const lbl=document.getElementById('asset-value-label');
+  if(type==='asset'){cat.innerHTML='<option>Furniture & Fixtures</option><option>Equipment & Tools</option><option>Electronics & Devices</option><option>Cash in Till</option><option>Bank Balance</option><option>Vehicle</option><option>Other Asset</option>';lbl.textContent='Current Value (TZS) *';}
+  else{cat.innerHTML='<option>Supplier Debt</option><option>Bank Loan</option><option>Personal Loan</option><option>Rent Owed</option><option>Other Liability</option>';lbl.textContent='Amount Owed (TZS) *';}
+}
+function openAddAssetModal(){document.getElementById('asset-id').value='';document.getElementById('asset-name').value='';document.getElementById('asset-value').value='';document.getElementById('asset-note').value='';document.getElementById('asset-type').value='asset';document.getElementById('asset-modal-title').textContent='Add Asset or Liability';updateAssetCategories();openModal('modal-add-asset');}
+function saveAsset(){
+  const id=document.getElementById('asset-id').value;const type=document.getElementById('asset-type').value;
+  const cat=document.getElementById('asset-cat').value;const name=document.getElementById('asset-name').value.trim();
+  const value=parseFloat(document.getElementById('asset-value').value);const note=document.getElementById('asset-note').value.trim();
+  if(!name)return showToast('Enter an item name!');if(isNaN(value)||value<0)return showToast('Enter a valid value!');
+  if(id){const item=assetItems.find(x=>x.id===id);if(item){item.type=type;item.cat=cat;item.name=name;item.value=value;item.note=note;}}
+  else assetItems.push({id:uid(),date:new Date().toISOString(),type,cat,name,value,note});
+  saveAssets();closeModal('modal-add-asset');renderAssets();renderNetWorth();
+  showToast(type==='asset'?'Asset recorded!':'Liability recorded!');
+}
+function editAsset(id){
+  const item=assetItems.find(x=>x.id===id);if(!item)return;
+  document.getElementById('asset-id').value=item.id;document.getElementById('asset-type').value=item.type;updateAssetCategories();
+  document.getElementById('asset-cat').value=item.cat;document.getElementById('asset-name').value=item.name;
+  document.getElementById('asset-value').value=item.value;document.getElementById('asset-note').value=item.note||'';
+  document.getElementById('asset-modal-title').textContent='Edit Item';openModal('modal-add-asset');
+}
+function deleteAsset(id){const item=assetItems.find(x=>x.id===id);if(!item)return;if(!confirm('Delete "'+item.name+'"?'))return;assetItems=assetItems.filter(x=>x.id!==id);saveAssets();renderAssets();renderNetWorth();showToast('Deleted.');}
+function renderAssets(){
+  const assets=assetItems.filter(x=>x.type==='asset');const liabs=assetItems.filter(x=>x.type==='liability');
+  const ta=assets.reduce((a,x)=>a+x.value,0);const tl=liabs.reduce((a,x)=>a+x.value,0);
+  document.getElementById('asset-total-value').textContent=fmt(ta);document.getElementById('asset-count').textContent=assets.length+' items recorded';
+  document.getElementById('liab-total-value').textContent=fmt(tl);document.getElementById('liab-count').textContent=liabs.length+' items recorded';
+  const np=document.getElementById('asset-net-position');if(np){np.textContent=fmt(ta-tl);np.className='card-value '+(ta-tl>=0?'accent':'red');}
+  const makeRow=item=>`<tr><td><strong>${item.name}</strong></td><td><span class="badge badge-blue">${item.cat}</span></td><td style="font-weight:700;color:${item.type==='asset'?'var(--green)':'var(--red)'}">${fmt(item.value)}</td><td style="color:var(--text3);font-size:13px">${item.note||'—'}</td><td style="display:flex;gap:6px"><button class="btn btn-sm btn-ghost" onclick="editAsset('${item.id}')">✏️ Edit</button><button class="btn btn-sm btn-red" onclick="deleteAsset('${item.id}')">🗑</button></td></tr>`;
+  const ab=document.getElementById('assets-body');if(ab)ab.innerHTML=assets.length?assets.map(makeRow).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">No assets recorded yet. Tap "+ Add Item" to start.</td></tr>';
+  const lb=document.getElementById('liabilities-body');if(lb)lb.innerHTML=liabs.length?liabs.map(makeRow).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">No liabilities recorded. Great news!</td></tr>';
+}
+
+// RECEIPTS
+function renderReceiptsPage(){
+  const q=document.getElementById('rec-search').value.toLowerCase();
+  const filtered=[...sales].sort((a,b)=>b.date.localeCompare(a.date)).filter(s=>s.customer.toLowerCase().includes(q)||s.date.includes(q)||s.id.includes(q));
+  document.getElementById('receipts-list').innerHTML=filtered.map(s=>`<div class="card" style="${s.voided?'opacity:.55;border-color:var(--red)':''}"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1;cursor:pointer" onclick="viewReceipt('${s.id}')"><div style="font-weight:700">${s.customer} ${s.voided?'<span class="badge badge-red">VOIDED</span>':''}</div><div style="font-size:12px;color:var(--text2);margin-top:2px">${new Date(s.date).toLocaleString('en-TZ')}</div><div style="font-size:12px;color:var(--text3);margin-top:4px">${s.items.map(i=>i.name+' x'+i.qty).join(', ').substring(0,50)}</div></div><div style="text-align:right"><div style="color:${s.voided?'var(--text3)':'var(--accent)'};font-weight:700;font-size:16px;${s.voided?'text-decoration:line-through':''}">${fmt(s.total)}</div><span class="badge badge-blue">${s.payment}</span></div></div><div style="font-size:11px;color:var(--text3);margin-top:8px">#${s.id.substring(0,8).toUpperCase()}</div><div style="display:flex;gap:6px;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;flex-wrap:wrap"><button class="btn btn-sm btn-ghost" onclick="viewReceipt('${s.id}')">🧾 View</button>${!s.voided?`<button class="btn btn-sm btn-ghost" onclick="editSale('${s.id}')">✏️ Edit Sale</button>`:''}${!s.voided?`<button class="btn btn-sm btn-red" onclick="voidSale('${s.id}')">🚫 Void</button>`:''}<button class="btn btn-sm btn-red" onclick="deleteSale('${s.id}')">🗑 Delete</button></div></div>`).join('')||'<p style="color:var(--text3);font-size:13px">No receipts found.</p>';
+}
+function viewReceipt(id){const s=sales.find(x=>x.id===id);if(!s)return;document.getElementById('receipt-content').innerHTML=buildReceiptHTML(s);openModal('modal-receipt');}
+function voidSale(id){
+  const s=sales.find(x=>x.id===id);if(!s)return;
+  if(!confirm('Void this sale? Stock will be returned to inventory. Record stays but marked VOIDED.'))return;
+  s.items.forEach(item=>{const p=products.find(x=>x.id===item.pid);if(p)p.stock+=item.qty;});
+  s.voided=true;s.total=0;s.cogs=0;save();renderReceiptsPage();renderInventory();checkLowStock();showToast('Sale voided. Stock returned.');
+}
+function deleteSale(id){
+  const s=sales.find(x=>x.id===id);if(!s)return;
+  if(!confirm(s.voided?'Permanently delete this voided sale record?':'Permanently delete this sale? Stock will NOT be returned. Use Void if you want stock back.'))return;
+  sales=sales.filter(x=>x.id!==id);save();renderReceiptsPage();showToast('Sale deleted.');
+}
+let editSaleItems=[];
+function editSale(id){
+  const s=sales.find(x=>x.id===id);if(!s||s.voided)return showToast('Cannot edit a voided sale.');
+  document.getElementById('esale-id').value=s.id;document.getElementById('esale-customer').value=s.customer;document.getElementById('esale-payment').value=s.payment;
+  editSaleItems=s.items.map(i=>({...i}));renderEditItems();openModal('modal-edit-sale');
+}
+function renderEditItems(){
+  const list=document.getElementById('esale-items-list');
+  list.innerHTML=editSaleItems.length?editSaleItems.map((item,i)=>`<div class="sale-item"><div class="sale-item-name">${item.name}</div><div style="display:flex;align-items:center;gap:6px"><button class="qty-btn" onclick="adjEdit(${i},-1)">−</button><span style="min-width:28px;text-align:center;font-size:16px;font-weight:700">${item.qty}</span><button class="qty-btn" onclick="adjEdit(${i},1)">+</button></div><div class="sale-item-price">${fmt(item.sell*item.qty)}</div><button class="sale-item-del" onclick="remEdit(${i})">×</button></div>`).join(''):'<p style="color:var(--text3);font-size:13px;padding:8px">No items remaining.</p>';
+  const t=document.getElementById('esale-total-display');if(t)t.textContent=fmt(editSaleItems.reduce((a,i)=>a+i.sell*i.qty,0));
+}
+function adjEdit(i,d){editSaleItems[i].qty=Math.max(1,editSaleItems[i].qty+d);renderEditItems();}
+function remEdit(i){editSaleItems.splice(i,1);renderEditItems();}
+function saveEditSale(){
+  const id=document.getElementById('esale-id').value;const s=sales.find(x=>x.id===id);if(!s)return;
+  s.items.forEach(item=>{const p=products.find(x=>x.id===item.pid);if(p)p.stock+=item.qty;});
+  editSaleItems.forEach(item=>{const p=products.find(x=>x.id===item.pid);if(p)p.stock=Math.max(0,p.stock-item.qty);});
+  s.customer=document.getElementById('esale-customer').value||s.customer;s.payment=document.getElementById('esale-payment').value;
+  s.items=editSaleItems.map(i=>({...i}));s.total=s.items.reduce((a,i)=>a+i.sell*i.qty,0);s.cogs=s.items.reduce((a,i)=>a+i.buy*i.qty,0);
+  save();closeModal('modal-edit-sale');renderReceiptsPage();renderInventory();checkLowStock();showToast('Sale updated!');
+}
+
+
+// ==================== CHARTS ====================
+function renderCharts() {
+  renderSalesBarChart();
+  renderTopProducts();
+}
+
+function renderSalesBarChart() {
+  const el = document.getElementById('chart-sales-bar');
+  if (!el) return;
+
+  // Build last 7 days data
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const label = d.toLocaleDateString('en-TZ', {weekday:'short'});
+    const total = sales.filter(s => !s.voided && s.date.startsWith(key)).reduce((a,s) => a + s.total, 0);
+    days.push({key, label, total});
+  }
+
+  const max = Math.max(...days.map(d => d.total), 1);
+  const W = el.offsetWidth || 300;
+  const H = 140;
+  const pad = {l:10, r:10, t:10, b:32};
+  const chartH = H - pad.t - pad.b;
+  const barW = Math.floor((W - pad.l - pad.r) / 7) - 4;
+  const barGap = Math.floor((W - pad.l - pad.r) / 7);
+
+  let bars = '', labels = '', values = '';
+  days.forEach((d, i) => {
+    const x = pad.l + i * barGap + (barGap - barW) / 2;
+    const bh = d.total > 0 ? Math.max(4, Math.round((d.total / max) * chartH)) : 0;
+    const y = pad.t + chartH - bh;
+    const isToday = i === 6;
+    const color = isToday ? '#e8a000' : d.total > 0 ? '#5a3d00' : '#2a2a2a';
+    const textColor = isToday ? '#e8a000' : '#666';
+
+    bars += `<rect x="${x}" y="${y}" width="${barW}" height="${bh}" rx="3" fill="${color}"/>`;
+
+    // Value label on top of bar
+    if (d.total > 0) {
+      const kval = d.total >= 1000 ? Math.round(d.total/1000)+'k' : d.total;
+      values += `<text x="${x + barW/2}" y="${y - 4}" text-anchor="middle" font-size="9" fill="${isToday ? '#e8a000' : '#888'}" font-family="Barlow,sans-serif">${kval}</text>`;
+    }
+
+    labels += `<text x="${x + barW/2}" y="${H - 6}" text-anchor="middle" font-size="10" fill="${textColor}" font-weight="${isToday?'700':'400'}" font-family="Barlow,sans-serif">${d.label}</text>`;
+  });
+
+  el.innerHTML = `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <rect width="${W}" height="${H}" fill="transparent"/>
+    ${bars}${values}${labels}
+  </svg>`;
+}
+
+function renderTopProducts() {
+  const el = document.getElementById('chart-top-products');
+  if (!el) return;
+
+  const f = getPeriodFilter(dashPeriod);
+  const periodSales = sales.filter(s => !s.voided && f(s.date));
+
+  // Count qty sold per product
+  const tally = {};
+  periodSales.forEach(s => s.items.forEach(item => {
+    tally[item.name] = (tally[item.name] || 0) + item.qty;
+  }));
+
+  const sorted = Object.entries(tally).sort((a,b) => b[1]-a[1]).slice(0, 5);
+  const maxQty = sorted.length ? sorted[0][1] : 1;
+
+  document.getElementById('top-period-label').textContent = dashPeriod === 'today' ? 'today' : dashPeriod === 'week' ? 'this week' : dashPeriod === 'month' ? 'this month' : 'this year';
+
+  if (sorted.length === 0) {
+    el.innerHTML = '<p style="color:var(--text3);font-size:13px;padding:8px 0">No sales in this period yet.</p>';
+    return;
+  }
+
+  el.innerHTML = sorted.map(([name, qty], i) => {
+    const pct = Math.round((qty / maxQty) * 100);
+    const medals = ['🥇','🥈','🥉','',''];
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+        <span style="font-weight:600">${medals[i]} ${name.length > 22 ? name.substring(0,22)+'…' : name}</span>
+        <span style="color:var(--accent);font-weight:700">${qty} sold</span>
+      </div>
+      <div class="progress-bar" style="height:6px">
+        <div class="progress-fill" style="width:${pct}%;background:${i===0?'var(--accent)':'var(--border2)'}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// PWA
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;const b=document.getElementById('install-banner');if(b)b.style.display='flex';});
+function installApp(){if(!deferredPrompt)return;deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null;const b=document.getElementById('install-banner');if(b)b.style.display='none';});}
+
+// INIT
+window.addEventListener('online', () => { checkOnline(); syncAll(); }); // sync when back online
+window.addEventListener('offline', checkOnline);
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.style.display='none';}));
+window.addEventListener('resize', () => { if(currentPage==='dashboard') renderSalesBarChart(); });
+updateHeaderDate();
+
+// ── FIREBASE STARTUP: load from cloud, fall back to localStorage ──
+async function initApp() {
+  setSyncStatus('syncing', '⏳ Loading...');
+  try {
+    // Set a 5-second timeout — if Firebase doesn't respond, use local data
+    const timeout = new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), 5000));
+    const loadAll = Promise.all([
+      loadFromCloud('products'),
+      loadFromCloud('sales'),
+      loadFromCloud('purchases'),
+      loadFromCloud('expenses'),
+      loadFromCloud('instalments'),
+      loadFromCloud('assets')
+    ]);
+    const [
+      cloudProducts, cloudSales, cloudPurchases,
+      cloudExpenses, cloudInstalments, cloudAssets
+    ] = await Promise.race([loadAll, timeout]);
+
+    let migrated = false;
+
+    if (cloudProducts && cloudProducts.length > 0) {
+      products = cloudProducts;
+      DB.set('products', products);
+    } else if (products.length > 0) {
+      migrated = true;
+    }
+    if (cloudSales !== null) { sales = cloudSales; DB.set('sales', sales); }
+    else if (sales.length > 0) migrated = true;
+    if (cloudPurchases !== null) { purchases = cloudPurchases; DB.set('purchases', purchases); }
+    if (cloudExpenses !== null) { expenses = cloudExpenses; DB.set('expenses', expenses); }
+    if (cloudInstalments !== null) { instalments = cloudInstalments; DB.set('instalments', instalments); }
+    if (cloudAssets !== null) { assetItems = cloudAssets; DB.set('assets', assetItems); }
+
+    if (migrated) {
+      syncAll();
+      showToast('✅ Data saved to cloud!');
+    } else {
+      setSyncStatus('synced', '☁️ Synced');
+    }
+
+  } catch(e) {
+    // Firebase unavailable — app works fine on local data
+    setSyncStatus('error', '● Offline mode');
+    console.info('Using local data:', e.message);
+  }
+
+  // Check for demo data and load real products if needed
+  const _demo=['Brake Pad Honda CG125','Engine Oil 4T 1L','Air Filter Yamaha FZ'];
+  if (products.length === 0 || products.some(p => _demo.includes(p.name))) {
+    // Products will be loaded by the seed block above
+    // Force re-check after seed
+  }
+
+  checkOnline();
+  checkLowStock();
+  renderDashboard();
+}
+
+initApp();
+
+</script>
+</body>
+</html>
