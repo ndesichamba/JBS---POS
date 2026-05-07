@@ -1,9 +1,9 @@
 const CACHE = 'jbs-pos-v1';
 const ASSETS = [
-  '/jbs-pos/',
-  '/jbs-pos/index.html',
-  '/jbs-pos/icon.svg',
-  '/jbs-pos/manifest.json'
+  '/JBS---POS/',
+  '/JBS---POS/index.html',
+  '/JBS---POS/icon.svg',
+  '/JBS---POS/manifest.json'
 ];
 
 self.addEventListener('install', e => {
@@ -31,7 +31,7 @@ self.addEventListener('fetch', e => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));
         return res;
-      }).catch(() => caches.match('/jbs-pos/index.html'));
+      }).catch(() => caches.match('/JBS---POS/index.html'));
     })
   );
 });
