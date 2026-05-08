@@ -634,10 +634,13 @@ let products=DB.get('products'), sales=DB.get('sales'), purchases=DB.get('purcha
     expenses=DB.get('expenses'), instalments=DB.get('instalments'), assetItems=DB.get('assets');
 
 function save(){
-  // Always save to localStorage first (instant, works offline)
-  DB.set('products',products);DB.set('sales',sales);DB.set('purchases',purchases);
-  DB.set('expenses',expenses);DB.set('instalments',instalments);
-  // Then sync to Firebase in background (non-blocking)
+  // Save to localStorage immediately (works offline, instant)
+  DB.set('products',products);
+  DB.set('sales',sales);
+  DB.set('purchases',purchases);
+  DB.set('expenses',expenses);
+  DB.set('instalments',instalments);
+  // Sync to Firebase in background (non-blocking, won't freeze the app)
   syncAll();
 }
 function saveAssets(){
@@ -789,7 +792,7 @@ function renderPage(name){
 }
 function updateHeaderDate(){const d=new Date();document.getElementById('header-date').textContent=d.toLocaleDateString('en-TZ',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
 function checkOnline(){const b=document.getElementById('offline-badge');navigator.onLine?b.classList.remove('show'):b.classList.add('show');}
-function checkLowStock(){const low=products.filter(p=>p.stock<=p.low);const b=document.getElementById('low-stock-banner');if(low.length>0){b.classList.add('show');b.innerHTML=`⚠️ <strong>Low Stock Alert!</strong> ${low.length} product(s) running low: ${low.map(p=>p.name).join(', ')}. Tap to view.`;}else b.classList.remove('show');}
+function checkLowStock(){const low=products.filter(p=>p.stock>0&&p.stock<=p.low);const out=products.filter(p=>p.stock===0);const b=document.getElementById('low-stock-banner');if(low.length>0){b.classList.add('show');b.innerHTML=`⚠️ <strong>Low Stock Alert!</strong> ${low.length} product(s) running low. Tap to view.`;}else b.classList.remove('show');}
 
 // NET WORTH
 function calcNetWorth(){
@@ -864,11 +867,12 @@ function renderDashboard(){
   const recent=[...sales].filter(s=>!s.voided).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
   tbody.innerHTML=recent.map(s=>`<tr><td>${s.items.map(i=>i.name).join(', ').substring(0,30)}</td><td>${s.items.reduce((a,i)=>a+i.qty,0)}</td><td style="color:var(--accent)">${fmt(s.total)}</td><td style="color:var(--text2);font-size:12px">${new Date(s.date).toLocaleTimeString('en-TZ',{hour:'2-digit',minute:'2-digit'})}</td></tr>`).join('');
   renderCharts();
-  const low=products.filter(p=>p.stock<=p.low);
   const outOf=products.filter(p=>p.stock===0);
+  const low=products.filter(p=>p.stock>0&&p.stock<=p.low);
   let ah='';
-  if(outOf.length)ah+=outOf.map(p=>`<div class="alert alert-red">🚫 <strong>${p.name}</strong> — OUT OF STOCK</div>`).join('');
-  ah+=low.filter(p=>p.stock>0).map(p=>`<div class="alert alert-orange">⚠️ <strong>${p.name}</strong> — Only ${p.stock} left</div>`).join('');
+  if(outOf.length)ah+=outOf.slice(0,5).map(p=>`<div class="alert alert-red">🚫 <strong>${p.name}</strong> — OUT OF STOCK</div>`).join('');
+  if(outOf.length>5)ah+=`<div class="alert alert-red">🚫 ...and ${outOf.length-5} more out of stock</div>`;
+  ah+=low.map(p=>`<div class="alert alert-orange">⚠️ <strong>${p.name}</strong> — Only ${p.stock} left</div>`).join('');
   if(!ah)ah='<p style="color:var(--text3);font-size:13px">✅ All products are well-stocked.</p>';
   document.getElementById('dash-stock-alerts').innerHTML=ah;
   renderNetWorth();
@@ -902,7 +906,7 @@ function renderCart(){
   else el.innerHTML=cart.map((c,i)=>`<div class="sale-item"><div class="sale-item-name">${c.name}</div><div style="display:flex;align-items:center;gap:6px"><button class="qty-btn" onclick="adjustQty(${i},-1)">−</button><span style="min-width:28px;text-align:center;font-size:16px;font-weight:700">${c.qty}</span><button class="qty-btn" onclick="adjustQty(${i},1)">+</button></div><div class="sale-item-price">${fmt(c.sell*c.qty)}</div><button class="sale-item-del" onclick="removeFromCart(${i})">×</button></div>`).join('');
   document.getElementById('cart-total').textContent=fmt(cart.reduce((a,c)=>a+c.sell*c.qty,0));
 }
-function adjustQty(i,delta){const p=products.find(x=>x.id===cart[i].pid);cart[i].qty=Math.max(1,Math.min(p?p.stock:999,cart[i].qty+delta));renderCart();}
+function adjustQty(i,delta){const p=products.find(x=>x.id===cart[i].pid);const maxQ=p?Math.max(1,p.stock):999;cart[i].qty=Math.max(1,Math.min(maxQ,cart[i].qty+delta));renderCart();}
 function removeFromCart(i){cart.splice(i,1);renderCart();}
 function clearCart(){cart=[];renderCart();}
 function completeSale(){
@@ -917,7 +921,7 @@ function completeSale(){
     if(deposit>=total)return showToast('Deposit cannot exceed total!');
     instalments.push({id:uid(),date:new Date().toISOString(),customer,items:cart.map(c=>c.name).join(', '),total,paid:deposit,payments:deposit>0?[{date:new Date().toISOString(),amount:deposit}]:[],numInst});
   }
-  cart.forEach(c=>{const p=products.find(x=>x.id===c.pid);if(p)p.stock-=c.qty;});
+  cart.forEach(c=>{const p=products.find(x=>x.id===c.pid);if(p)p.stock=Math.max(0,p.stock-c.qty);});
   const sale={id:uid(),date:new Date().toISOString(),customer,items:[...cart],total,cogs,payment};
   sales.push(sale);save();checkLowStock();
   document.getElementById('receipt-content').innerHTML=buildReceiptHTML(sale);
@@ -1016,7 +1020,7 @@ function addPurchase(){
   const supplier=document.getElementById('pur-supplier').value;
   if(!pid||isNaN(qty)||isNaN(cost))return showToast('Fill in all fields!');
   const p=products.find(x=>x.id===pid);if(!p)return;
-  p.stock+=qty;p.buy=cost;
+  p.stock+=qty;if(cost>0)p.buy=cost; // update cost price from latest purchase
   purchases.push({id:uid(),date:new Date().toISOString(),supplier,productId:pid,productName:p.name,qty,cost});
   save();closeModal('modal-add-purchase');renderPurchases();renderInventory();checkLowStock();
   showToast(`Stocked ${qty}x ${p.name}!`);
@@ -1330,8 +1334,8 @@ updateHeaderDate();
 async function initApp() {
   setSyncStatus('syncing', '⏳ Loading...');
   try {
-    // Set a 5-second timeout — if Firebase doesn't respond, use local data
-    const timeout = new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), 5000));
+    // Load from Firebase — 10 second timeout before falling back to local
+    const timeout = new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), 10000));
     const loadAll = Promise.all([
       loadFromCloud('products'),
       loadFromCloud('sales'),
@@ -1374,13 +1378,6 @@ async function initApp() {
     // Firebase unavailable — app works fine on local data
     setSyncStatus('error', '● Offline mode');
     console.info('Using local data:', e.message);
-  }
-
-  // Check for demo data and load real products if needed
-  const _demo=['Brake Pad Honda CG125','Engine Oil 4T 1L','Air Filter Yamaha FZ'];
-  if (products.length === 0 || products.some(p => _demo.includes(p.name))) {
-    // Products will be loaded by the seed block above
-    // Force re-check after seed
   }
 
   checkOnline();
