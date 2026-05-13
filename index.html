@@ -279,7 +279,10 @@ tr:last-child td{border-bottom:none} tr:active td{background:var(--surface2)}
 <div id="page-inventory" class="page">
   <div class="sec-header">
     <div class="sec-title">Inventory</div>
-    <button class="btn btn-accent" onclick="openModal('modal-add-product')">+ Add Product</button>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div id="inv-summary" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:600;line-height:1.4;text-align:center"></div>
+      <button class="btn btn-accent" onclick="openModal('modal-add-product')">+ Add Product</button>
+    </div>
   </div>
   <div class="form-group" style="max-width:320px;margin-bottom:16px"><input type="text" id="inv-search" placeholder="Search products..." oninput="renderInventory()"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Product</th><th>Category</th><th>Buy Price</th><th>Sell Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead><tbody id="inventory-body"></tbody></table></div></div>
@@ -575,10 +578,11 @@ async function syncToCloud(collection, data) {
   try {
     setSyncStatus('syncing', '⏳ Saving...');
     const url = `${FS_BASE}/${collection}/data?key=${FIREBASE_API_KEY}`;
+    const localTS = DB.getTS(collection) || new Date().toISOString();
     const body = JSON.stringify({
       fields: {
         items: toFS(data),
-        updated: toFS(new Date().toISOString())
+        updated: toFS(localTS)
       }
     });
     const res = await fetch(url, {
@@ -601,7 +605,11 @@ async function loadFromCloud(collection) {
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const doc = await res.json();
-    if (doc.fields && doc.fields.items) return fromFS(doc.fields.items);
+    if (doc.fields && doc.fields.items) {
+      const items = fromFS(doc.fields.items);
+      const updated = doc.fields.updated ? fromFS(doc.fields.updated) : null;
+      return { items, updated };
+    }
     return null;
   } catch(e) {
     console.error('Load error:', collection, e.message);
@@ -629,7 +637,9 @@ async function syncAll() {
 // ==================== LOCAL DB (localStorage fallback) ====================
 const DB = {
   get(k){try{return JSON.parse(localStorage.getItem('jbs_'+k))||[];}catch{return[];}},
-  set(k,v){localStorage.setItem('jbs_'+k,JSON.stringify(v));}
+  set(k,v){localStorage.setItem('jbs_'+k,JSON.stringify(v));},
+  getTS(k){return localStorage.getItem('jbs_ts_'+k)||null;},
+  setTS(k){localStorage.setItem('jbs_ts_'+k, new Date().toISOString());}
 };
 let products=DB.get('products'), sales=DB.get('sales'), purchases=DB.get('purchases'),
     expenses=DB.get('expenses'), instalments=DB.get('instalments'), assetItems=DB.get('assets');
@@ -641,11 +651,14 @@ function save(){
   DB.set('purchases',purchases);
   DB.set('expenses',expenses);
   DB.set('instalments',instalments);
+  // Stamp the local modification time for each collection
+  ['products','sales','purchases','expenses','instalments'].forEach(k=>DB.setTS(k));
   // Sync to Firebase in background (non-blocking, won't freeze the app)
   syncAll();
 }
 function saveAssets(){
   DB.set('assets',assetItems);
+  DB.setTS('assets');
   syncToCloud('assets',assetItems);
 }
 
@@ -972,6 +985,16 @@ function printReceipt(){window.print();}
 
 // INVENTORY
 function renderInventory(){
+  // Update stock summary badge
+  const totalProducts = products.length;
+  const inStock = products.filter(p=>p.stock>0).length;
+  const totalUnits = products.reduce((a,p)=>a+p.stock,0);
+  const outOf = products.filter(p=>p.stock===0).length;
+  const summaryEl = document.getElementById('inv-summary');
+  if(summaryEl){
+    summaryEl.innerHTML = `<span style="color:var(--accent);font-size:16px;font-weight:800">${totalProducts}</span> <span style="color:var(--text2)">products</span><br><span style="color:var(--green);font-size:15px;font-weight:700">${totalUnits.toLocaleString()}</span> <span style="color:var(--text2)">units in stock</span>`;
+  }
+
   const q=document.getElementById('inv-search')?document.getElementById('inv-search').value.toLowerCase():'';
   const filtered=products.filter(p=>p.name.toLowerCase().includes(q)||p.cat.toLowerCase().includes(q));
   document.getElementById('inventory-body').innerHTML=filtered.map(p=>{
@@ -1325,18 +1348,35 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPro
 function installApp(){if(!deferredPrompt)return;deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null;const b=document.getElementById('install-banner');if(b)b.style.display='none';});}
 
 // INIT
-window.addEventListener('online', () => { checkOnline(); syncAll(); }); // sync when back online
+window.addEventListener('online', () => {
+  checkOnline();
+  // Re-run full init when internet returns — this pushes any offline work to cloud
+  setTimeout(() => initApp(), 1000);
+});
 window.addEventListener('offline', checkOnline);
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.style.display='none';}));
 window.addEventListener('resize', () => { if(currentPage==='dashboard') renderSalesBarChart(); });
 updateHeaderDate();
 
-// ── FIREBASE STARTUP: load from cloud, fall back to localStorage ──
+// ── FIREBASE STARTUP ──
+// Strategy: TIMESTAMP wins. Whichever copy (local or cloud) was modified
+// more recently is the source of truth. This handles offline sessions correctly.
 async function initApp() {
   setSyncStatus('syncing', '⏳ Loading...');
+
+  // Render from local data immediately so app is usable right away
+  checkOnline();
+  checkLowStock();
+  renderDashboard();
+
+  // If offline, use local data — sync will happen when internet returns
+  if (!navigator.onLine) {
+    setSyncStatus('error', '● Offline — data saved locally');
+    return;
+  }
+
   try {
-    // Load from Firebase — 10 second timeout before falling back to local
-    const timeout = new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), 10000));
+    const timeout = new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), 12000));
     const loadAll = Promise.all([
       loadFromCloud('products'),
       loadFromCloud('sales'),
@@ -1345,45 +1385,71 @@ async function initApp() {
       loadFromCloud('instalments'),
       loadFromCloud('assets')
     ]);
+
     const [
       cloudProducts, cloudSales, cloudPurchases,
       cloudExpenses, cloudInstalments, cloudAssets
     ] = await Promise.race([loadAll, timeout]);
 
-    let migrated = false;
+    let needsUpload = false;
+    let needsRerender = false;
 
-    // Cloud is always the source of truth if it has data
-    // This ensures stock entries are never lost
-    if (cloudProducts && cloudProducts.length > 0) {
-      products = cloudProducts;
-      DB.set('products', products);
-    } else if (products.length > 0) {
-      // We have local data but nothing on cloud yet — migrate up
-      migrated = true;
+    // Timestamp-based merge: newer modification wins
+    // localTS = when this device last saved this collection
+    // cloudTS = when Firebase was last updated for this collection
+    function mergeByTimestamp(local, cloudResult, dbKey) {
+      if (!cloudResult || !cloudResult.items) {
+        // Nothing on cloud — local wins, push up
+        if (local.length > 0) needsUpload = true;
+        return local;
+      }
+      const cloudItems = cloudResult.items || [];
+      const cloudTS = cloudResult.updated ? new Date(cloudResult.updated) : new Date(0);
+      const localTS = DB.getTS(dbKey) ? new Date(DB.getTS(dbKey)) : new Date(0);
+
+      console.log(`${dbKey}: local ${localTS.toISOString()} vs cloud ${cloudTS.toISOString()}`);
+
+      if (localTS > cloudTS) {
+        // Local is newer — local wins, push to cloud
+        console.log(`${dbKey}: LOCAL WINS (modified more recently)`);
+        needsUpload = true;
+        return local;
+      } else {
+        // Cloud is newer or equal — cloud wins, update local
+        if (JSON.stringify(cloudItems) !== JSON.stringify(local)) {
+          DB.set(dbKey, cloudItems);
+          DB.setTS(dbKey); // stamp local with cloud time
+          needsRerender = true;
+        }
+        console.log(`${dbKey}: CLOUD WINS`);
+        return cloudItems;
+      }
     }
-    if (cloudSales && cloudSales.length > 0) { sales = cloudSales; DB.set('sales', sales); }
-    else if (sales.length > 0 && !cloudSales) migrated = true;
-    if (cloudPurchases && cloudPurchases.length > 0) { purchases = cloudPurchases; DB.set('purchases', purchases); }
-    if (cloudExpenses && cloudExpenses.length > 0) { expenses = cloudExpenses; DB.set('expenses', expenses); }
-    if (cloudInstalments && cloudInstalments.length > 0) { instalments = cloudInstalments; DB.set('instalments', instalments); }
-    if (cloudAssets && cloudAssets.length > 0) { assetItems = cloudAssets; DB.set('assets', assetItems); }
 
-    if (migrated) {
+    products    = mergeByTimestamp(products,    cloudProducts,    'products');
+    sales       = mergeByTimestamp(sales,       cloudSales,       'sales');
+    purchases   = mergeByTimestamp(purchases,   cloudPurchases,   'purchases');
+    expenses    = mergeByTimestamp(expenses,    cloudExpenses,    'expenses');
+    instalments = mergeByTimestamp(instalments, cloudInstalments, 'instalments');
+    assetItems  = mergeByTimestamp(assetItems,  cloudAssets,      'assets');
+
+    if (needsUpload) {
+      setSyncStatus('syncing', '⏳ Syncing offline data...');
       await syncAll();
-      showToast('✅ Data backed up to cloud!');
+      showToast('✅ Offline data synced to cloud!');
     } else {
       setSyncStatus('synced', '☁️ Synced');
     }
 
-  } catch(e) {
-    // Firebase unavailable — app works fine on local data
-    setSyncStatus('error', '● Offline mode');
-    console.info('Using local data:', e.message);
-  }
+    if (needsRerender) {
+      checkLowStock();
+      renderDashboard();
+    }
 
-  checkOnline();
-  checkLowStock();
-  renderDashboard();
+  } catch(e) {
+    setSyncStatus('error', '● Offline mode');
+    console.info('Firebase unavailable, using local data:', e.message);
+  }
 }
 
 initApp();
