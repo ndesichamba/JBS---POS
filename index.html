@@ -1388,12 +1388,36 @@ async function initApp() {
 
 initApp();
 
-// Register service worker for offline support + PWA install
+// Register service worker — network-first, always loads latest version
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(() => console.log('SW registered'))
-      .catch(() => console.log('SW not available'));
+    navigator.serviceWorker.register('sw.js').then(reg => {
+
+      // Check for updates every time the app opens
+      reg.update();
+
+      // When a new service worker is waiting, activate it immediately
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        if (!newSW) return;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version available — tell it to take over and reload
+            newSW.postMessage('SKIP_WAITING');
+          }
+        });
+      });
+
+    }).catch(() => {});
+
+    // When the service worker changes, reload the page to get latest version
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
   });
 }
 
