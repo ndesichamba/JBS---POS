@@ -1359,17 +1359,24 @@ window.addEventListener('resize', () => { if(currentPage==='dashboard') renderSa
 updateHeaderDate();
 
 // ── FIREBASE STARTUP ──
-// Strategy: TIMESTAMP wins. Whichever copy (local or cloud) was modified
-// more recently is the source of truth. This handles offline sessions correctly.
+// Two-phase strategy:
+// Phase 1 — Render local data immediately so app is usable right away
+// Phase 2 — Compare timestamps with Firebase:
+//   • If local was modified AFTER the last cloud sync → local has offline work → push to cloud
+//   • Otherwise → always pull from cloud (cloud is the master for all online devices)
+//
+// The key insight: "localTS" only gets set when THIS device makes a change via save().
+// A device that never made changes has localTS = null = epoch, so cloud ALWAYS wins for it.
+// A device that made offline changes has localTS > cloudTS, so local wins and pushes up.
+
 async function initApp() {
   setSyncStatus('syncing', '⏳ Loading...');
 
-  // Render from local data immediately so app is usable right away
+  // Phase 1: render local immediately
   checkOnline();
   checkLowStock();
   renderDashboard();
 
-  // If offline, use local data — sync will happen when internet returns
   if (!navigator.onLine) {
     setSyncStatus('error', '● Offline — data saved locally');
     return;
@@ -1377,61 +1384,58 @@ async function initApp() {
 
   try {
     const timeout = new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), 12000));
-    const loadAll = Promise.all([
-      loadFromCloud('products'),
-      loadFromCloud('sales'),
-      loadFromCloud('purchases'),
-      loadFromCloud('expenses'),
-      loadFromCloud('instalments'),
-      loadFromCloud('assets')
-    ]);
-
     const [
       cloudProducts, cloudSales, cloudPurchases,
       cloudExpenses, cloudInstalments, cloudAssets
-    ] = await Promise.race([loadAll, timeout]);
+    ] = await Promise.race([
+      Promise.all([
+        loadFromCloud('products'),
+        loadFromCloud('sales'),
+        loadFromCloud('purchases'),
+        loadFromCloud('expenses'),
+        loadFromCloud('instalments'),
+        loadFromCloud('assets')
+      ]),
+      timeout
+    ]);
 
     let needsUpload = false;
     let needsRerender = false;
 
-    // Timestamp-based merge: newer modification wins
-    // localTS = when this device last saved this collection
-    // cloudTS = when Firebase was last updated for this collection
-    function mergeByTimestamp(local, cloudResult, dbKey) {
-      if (!cloudResult || !cloudResult.items) {
-        // Nothing on cloud — local wins, push up
+    function merge(local, cloudResult, dbKey) {
+      if (!cloudResult || !cloudResult.items || cloudResult.items.length === 0) {
+        // Nothing on cloud at all — push local up if we have something
         if (local.length > 0) needsUpload = true;
         return local;
       }
-      const cloudItems = cloudResult.items || [];
+
+      const cloudItems = cloudResult.items;
       const cloudTS = cloudResult.updated ? new Date(cloudResult.updated) : new Date(0);
-      const localTS = DB.getTS(dbKey) ? new Date(DB.getTS(dbKey)) : new Date(0);
+      // localTS is ONLY set when this device calls save() — null means never modified here
+      const localTSStr = DB.getTS(dbKey);
+      const localTS = localTSStr ? new Date(localTSStr) : new Date(0);
 
-      console.log(`${dbKey}: local ${localTS.toISOString()} vs cloud ${cloudTS.toISOString()}`);
-
-      if (localTS > cloudTS) {
-        // Local is newer — local wins, push to cloud
-        console.log(`${dbKey}: LOCAL WINS (modified more recently)`);
+      // If this device made changes more recently than the last cloud update → local wins
+      if (localTSStr && localTS > cloudTS) {
+        console.log(`${dbKey}: LOCAL newer (${localTS.toISOString()}) → pushing to cloud`);
         needsUpload = true;
         return local;
-      } else {
-        // Cloud is newer or equal — cloud wins, update local
-        if (JSON.stringify(cloudItems) !== JSON.stringify(local)) {
-          DB.set(dbKey, cloudItems);
-          DB.setTS(dbKey); // stamp local with cloud time
-          needsRerender = true;
-        }
-        console.log(`${dbKey}: CLOUD WINS`);
-        return cloudItems;
       }
+
+      // Cloud is the master — always use it (handles cross-device sync)
+      console.log(`${dbKey}: CLOUD is master → pulling latest`);
+      DB.set(dbKey, cloudItems);
+      // DO NOT update localTS here — we only stamp it when we make changes
+      if (JSON.stringify(cloudItems) !== JSON.stringify(local)) needsRerender = true;
+      return cloudItems;
     }
 
-    products    = mergeByTimestamp(products,    cloudProducts,    'products');
-    sales       = mergeByTimestamp(sales,       cloudSales,       'sales');
-    purchases   = mergeByTimestamp(purchases,   cloudPurchases,   'purchases');
-    expenses    = mergeByTimestamp(expenses,    cloudExpenses,    'expenses');
-    instalments = mergeByTimestamp(instalments, cloudInstalments, 'instalments');
-    assetItems  = mergeByTimestamp(assetItems,  cloudAssets,      'assets');
+    products    = merge(products,    cloudProducts,    'products');
+    sales       = merge(sales,       cloudSales,       'sales');
+    purchases   = merge(purchases,   cloudPurchases,   'purchases');
+    expenses    = merge(expenses,    cloudExpenses,    'expenses');
+    instalments = merge(instalments, cloudInstalments, 'instalments');
+    assetItems  = merge(assetItems,  cloudAssets,      'assets');
 
     if (needsUpload) {
       setSyncStatus('syncing', '⏳ Syncing offline data...');
@@ -1441,7 +1445,7 @@ async function initApp() {
       setSyncStatus('synced', '☁️ Synced');
     }
 
-    if (needsRerender) {
+    if (needsRerender || needsUpload) {
       checkLowStock();
       renderDashboard();
     }
