@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JBS Data Restore</title>
+<style>
+body{font-family:sans-serif;background:#0f0f0f;color:#f0f0f0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box}
+.box{background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:32px;max-width:480px;width:100%;text-align:center}
+h2{color:#e8a000;margin-bottom:8px}
+p{color:#aaa;font-size:14px;margin-bottom:24px;line-height:1.6}
+button{background:#e8a000;color:#000;border:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;width:100%}
+button:disabled{opacity:.5;cursor:not-allowed}
+#status{margin-top:20px;font-size:14px;line-height:1.8;text-align:left;background:#242424;border-radius:8px;padding:16px;display:none}
+.ok{color:#2ecc71} .err{color:#e74c3c} .info{color:#e8a000}
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>🔧 JBS Data Restore</h2>
+  <p>This will restore all 142 products with their stock quantities to Firebase.<br>
+  <strong style="color:#e74c3c">Run this once only.</strong> After restore, delete this page from GitHub.</p>
+  <button onclick="runRestore()" id="btn">▶ Restore Data to Firebase</button>
+  <div id="status"></div>
+</div>
+<script>
+const FIREBASE_PROJECT = 'jbs-spare-parts';
+const FIREBASE_API_KEY = 'AIzaSyD2Vvt6DA6G3IOTh3taFu7jBv53FR5Pc0E';
+const FS_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents`;
+
+function log(msg, cls='info') {
+  const s = document.getElementById('status');
+  s.style.display = 'block';
+  s.innerHTML += `<div class="${cls}">${msg}</div>`;
+}
+
+function toFS(val) {
+  if (val === null || val === undefined) return {nullValue: null};
+  if (typeof val === 'boolean') return {booleanValue: val};
+  if (typeof val === 'number') return Number.isInteger(val) ? {integerValue: String(val)} : {doubleValue: val};
+  if (typeof val === 'string') return {stringValue: val};
+  if (Array.isArray(val)) return {arrayValue: {values: val.map(toFS)}};
+  if (typeof val === 'object') return {mapValue: {fields: Object.fromEntries(Object.entries(val).map(([k,v])=>[k,toFS(v)]))}};
+  return {stringValue: String(val)};
+}
+
+async function pushCollection(name, data) {
+  const url = `${FS_BASE}/${name}/data?key=${FIREBASE_API_KEY}`;
+  const body = JSON.stringify({
+    fields: {
+      items: toFS(data),
+      updated: toFS(new Date().toISOString())
+    }
+  });
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return true;
+}
+
+async function runRestore() {
+  const btn = document.getElementById('btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Restoring...';
+
+  const backup = {"products":[{"stock":10,"cat":"Chain & Sprocket","name":"Ajast Chain","id":"yjgtwc5gjmovnt6s1","buy":1200,"sell":2500,"low":3},{"stock":10,"id":"u4o22cac4movnt6s1","name":"Bearings 6202","cat":"Engine Parts","buy":1000,"sell":2000,"low":3},{"buy":1200,"sell":2500,"low":3,"id":"cxka0r309movnt6s1","name":"Bearings 6204","cat":"Engine Parts","stock":10},{"sell":2000,"buy":1000,"low":3,"id":"25sqeu6zlmovnt6s1","cat":"Engine Parts","name":"Bearings 6301","stock":10},{"cat":"Engine Parts","name":"Bearings 6302","id":"ej65e5bavmovnt6s1","low":3,"sell":2500,"buy":1200,"stock":10},{"stock":5,"name":"Bendex","cat":"Electrical","id":"d8b9ufdwnmovnt6s1","low":3,"buy":4000,"sell":8000},{"stock":10,"sell":5000,"buy":3500,"low":3,"cat":"Engine Parts","name":"Boot Rubber GN","id":"tx2qd65limovnt6s1"},{"stock":10,"id":"yx4y3n3n4movnt6s1","name":"Brake Switch R","cat":"Brakes","low":3,"buy":600,"sell":1500},{"stock":10,"low":3,"buy":1500,"sell":3000,"id":"s0fi4nwozmovnt6s1","name":"Brake Haram","cat":"Brakes"},{"stock":2,"buy":1500,"sell":2500,"low":1,"cat":"Brakes","id":"p9hlnqajhmovnt6s1","name":"Brake Pad - Kawaida"},{"stock":10,"cat":"Brakes","name":"Brake Rod","id":"gs6w2nmxnmovnt6s1","low":3,"sell":2000,"buy":1200},{"low":3,"buy":2200,"sell":3500,"id":"xvby9eanpmovnt6s1","cat":"Brakes","name":"Brake Shoe Sinoray","stock":3},{"stock":0,"name":"Bulb Holder Nyuma","id":"1rv79ks9gmovnt6s1","cat":"Electrical","low":3,"sell":1500,"buy":600},{"low":3,"buy":600,"sell":1500,"id":"n0wmqqaf9movnt6s1","cat":"Electrical","name":"Bulb Holder Mbele","stock":0},{"sell":300,"buy":200,"low":3,"name":"Bulb Indicator","cat":"Electrical","id":"tl5uqlhlymovnt6s1","stock":10},{"stock":4,"cat":"Electrical","id":"3ke2gvbddmovnt6s1","name":"Bulb ya kichupa","sell":2000,"buy":1000,"low":2},{"low":3,"buy":300,"sell":500,"cat":"Electrical","name":"Bulb za nyuma","id":"a9ln236kymovnt6s1","stock":10},{"low":3,"sell":12000,"buy":9500,"name":"Cam Shaft YUAO","id":"057kbw4znmovnt6s1","cat":"Engine Parts","stock":0},{"sell":18000,"buy":13000,"low":1,"id":"fa3u5s5ccmovnt6s1","cat":"Engine Parts","name":"Carburetor","stock":2},{"buy":2500,"sell":5000,"low":3,"cat":"Electrical","id":"q0h28bcskmovnt6s1","name":"CDI","stock":0},{"buy":7000,"sell":10000,"low":3,"cat":"Chain & Sprocket","id":"zhtwej6c2movnt6s1","name":"Chain GN","stock":0},{"stock":0,"cat":"Chain & Sprocket","name":"Chain Kit Sinoray","id":"m2pjdfigbmovnt6s1","low":3,"sell":25000,"buy":17000},{"stock":0,"name":"Clutch Cable","cat":"Engine Parts","id":"jewydv27zmovnt6s1","sell":3000,"buy":1500,"low":3},{"stock":0,"low":3,"sell":2500,"buy":1500,"cat":"Engine Parts","name":"Clutch Cable 125","id":"dw261y6c5movnt6s1"},{"stock":0,"id":"5r31kaoy3movnt6s1","name":"Clutch Center","cat":"Engine Parts","low":0,"buy":10000,"sell":15000},{"low":0,"buy":9500,"sell":15000,"id":"ykelf4b9gmovnt6s1","cat":"Engine Parts","name":"Clutch Housing ⚠️CHECK SELL PRICE","stock":1},{"sell":5000,"buy":3500,"low":1,"id":"5tzg7mz5kmovnt6s1","name":"Clutch Plate 150","cat":"Engine Parts","stock":2},{"stock":0,"sell":1000,"buy":500,"low":3,"cat":"Engine Parts","id":"mc4i65xevmovnt6s1","name":"Clutch Wire GN"},{"name":"Deep Stick (Oil Dipstick)","id":"t9x8vuwdmmovnt6s1","cat":"Engine Parts","low":3,"buy":500,"sell":1000,"stock":0},{"stock":0,"cat":"Body Parts","id":"z0dio5i5emovnt6s1","name":"Dumu Petrol (Fuel Tank) ⚠️CHECK SELL PRICE","low":3,"buy":85000,"sell":85000},{"stock":0,"cat":"Body Parts","id":"xsgtsswc0movnt6s1","name":"Excel Kiuno (Rim Center)","sell":3000,"buy":1700,"low":3},{"stock":0,"low":3,"buy":1500,"sell":3000,"cat":"Body Parts","id":"t1fh6w4qzmovnt6s1","name":"Excel Mbele (Front Rim)"},{"stock":0,"low":3,"buy":1700,"sell":3000,"cat":"Body Parts","name":"Excel Nyuma (Rear Rim)","id":"4tbdldxqtmovnt6s1"},{"id":"e6r4da649movnt6s1","cat":"Engine Parts","name":"Accelerator Cable","buy":1300,"sell":2500,"low":3,"stock":0},{"id":"qbnkgwl7hmovnt6s1","name":"Foot Rest ya dereva - Sinoray kawaida","cat":"Body Parts","low":0,"sell":15000,"buy":10000,"stock":1},{"stock":0,"id":"ubqe49feamovnt6s1","name":"Fuse Box","cat":"Electrical","low":3,"sell":1000,"buy":500},{"name":"Fuse (per box)","cat":"Electrical","id":"yw4v3dg6emovnt6s1","sell":3500,"buy":3500,"low":3,"stock":0},{"stock":0,"low":3,"buy":500,"sell":1000,"cat":"Engine Parts","name":"Gasket Block","id":"p33064vktmovnt6s1"},{"low":3,"buy":500,"sell":1000,"id":"6duq276ujmovnt6s1","name":"Gasket Clutch","cat":"Engine Parts","stock":0},{"low":3,"sell":1000,"buy":500,"id":"pfm70jww5movnt6s1","name":"Gasket Coil","cat":"Engine Parts","stock":0},{"id":"cgd8yi48jmovnt6s1","cat":"Engine Parts","name":"Gasket Full 150","low":3,"sell":4000,"buy":2500,"stock":0},{"stock":0,"cat":"Engine Parts","name":"Gasket Moto","id":"ntqwlnc0omovnt6s1","low":3,"sell":1000,"buy":500},{"stock":0,"name":"Gear Box ⚠️CHECK SELL PRICE","cat":"Engine Parts","id":"eytqetvzomovnt6s1","sell":17500,"buy":17500,"low":3},{"low":3,"sell":3000,"buy":1500,"id":"tbno9u5qhmovnt6s1","name":"Gear Lever P1","cat":"Engine Parts","stock":0},{"cat":"Engine Parts","name":"Gear Lever P2","id":"95pguhbsgmovnt6s1","low":3,"buy":3500,"sell":5000,"stock":0},{"name":"Gololi Bendex","cat":"Electrical","id":"b2ke4b1evmovnt6s1","buy":1000,"sell":2000,"low":3,"stock":0},{"stock":0,"id":"mqum2kmrumovnt6s1","name":"Grease 1KG","cat":"Oils & Fluids","low":3,"sell":9000,"buy":9000},{"stock":0,"sell":2000,"buy":1200,"low":3,"id":"nqna2teswmovnt6s1","cat":"Body Parts","name":"Handle Brake GN"},{"cat":"Body Parts","name":"Handle Clutch GN","id":"sfa22cg1tmovnt6s1","buy":1200,"sell":2000,"low":3,"stock":0},{"stock":0,"buy":1500,"sell":3000,"low":3,"id":"wdxpua8ufmovnt6s1","name":"Handle Clutch New","cat":"Body Parts"},{"stock":0,"name":"Handle Switch","cat":"Electrical","id":"iacd1r1fcmovnt6s1","low":3,"sell":16500,"buy":10000},{"stock":0,"id":"mqjphqgq2movnt6s1","cat":"Electrical","name":"Horn Ndogo (Small Horn)","buy":2000,"sell":3000,"low":3},{"buy":3500,"sell":6000,"low":3,"name":"Ignition Coil","cat":"Electrical","id":"bg5x8iybqmovnt6s1","stock":0},{"stock":0,"low":3,"buy":2500,"sell":3000,"id":"9bhfanxv0movnt6s1","name":"Indicator","cat":"Electrical"},{"name":"Kick Shaft","cat":"Engine Parts","id":"gidyq38nhmovnt6s1","buy":6000,"sell":12000,"low":3,"stock":0},{"id":"7rviaqykpmovnt6s1","name":"Kick Starter GN","cat":"Engine Parts","sell":6000,"buy":4500,"low":3,"stock":0},{"stock":0,"low":3,"buy":500,"sell":1000,"name":"Koki Oil No.24","cat":"Oils & Fluids","id":"t17k75iyvmovnt6s1"},{"stock":12,"low":4,"sell":2500,"buy":1170,"name":"Brake Fluid (Mafuta ya Brake)","cat":"Oils & Fluids","id":"0wvh52uvrmovnt6s1"},{"stock":2,"cat":"Electrical","name":"Magneto Coil","id":"hoslkgk7nmovnt6s1","low":1,"sell":15000,"buy":9500},{"name":"Tank Cap (Mfuniko Tank)","cat":"Body Parts","id":"way61uwzpmovnt6s1","low":3,"buy":3500,"sell":5000,"stock":0},{"stock":0,"low":3,"sell":3000,"buy":1500,"id":"t4wf9y7rxmovnt6s1","cat":"Body Parts","name":"Mirror Holder New"},{"cat":"Engine Parts","id":"7svqm4vphmovnt6s1","name":"Nali Chuma (Metal Nut)","buy":700,"sell":2000,"low":5,"stock":13},{"cat":"Engine Parts","id":"gwnervxwqmovnt6s1","name":"Nati No 17/19 (Nut 17/19)","low":3,"sell":1000,"buy":300,"stock":0},{"stock":20,"cat":"Oils & Fluids","name":"Oil Oryx","id":"9977pgyxpmovnt6s1","low":4,"buy":6670,"sell":11000},{"stock":0,"sell":12000,"buy":7100,"low":4,"name":"Oil Total","id":"jm3j9on5qmovnt6s1","cat":"Oils & Fluids"},{"stock":9,"cat":"Tyres","id":"usuuk3j4amovnt6s1","name":"OKO Big (Tyre 2.75)","sell":5000,"buy":2250,"low":4},{"cat":"Engine Parts","id":"7kicierxkmovnt6s1","name":"Opena Gear (Gear Opener)","low":3,"buy":3500,"sell":7000,"stock":0},{"stock":0,"id":"i9fv8sqmtmovnt6s1","cat":"Engine Parts","name":"Piston Kit 150","low":3,"buy":6500,"sell":9000},{"id":"aquo9wrtimovnt6s1","cat":"Engine Parts","name":"Plug Sinoray (Spark Plug)","sell":3000,"buy":1500,"low":3,"stock":0},{"stock":0,"buy":1000,"sell":2000,"low":3,"name":"Plug P (Spark Plug P)","cat":"Engine Parts","id":"nxylq7i4pmovnt6s1"},{"cat":"Body Parts","name":"Pump T (Tyre Pump)","id":"s2ufh1dzemovnt6s1","low":3,"sell":6000,"buy":4000,"stock":0},{"stock":0,"sell":5000,"buy":3500,"low":3,"id":"o6m6x2dpxmovnt6s1","name":"Rectifier","cat":"Electrical"},{"stock":0,"cat":"Electrical","id":"3owiba6w6movnt6s1","name":"Relay","low":3,"buy":3500,"sell":5000},{"stock":0,"id":"x66za9z6imovnt6s1","cat":"Engine Parts","name":"Ring Piston 150","low":3,"buy":2500,"sell":4000},{"stock":0,"name":"Rola Pipe Black","cat":"Body Parts","id":"s2p2yjee6movnt6s1","sell":7000,"buy":7000,"low":3},{"cat":"Engine Parts","name":"Seal 31-43","id":"uh6yl6ot7movnt6s1","low":3,"buy":1000,"sell":2000,"stock":0},{"stock":0,"buy":1000,"sell":2000,"low":3,"cat":"Engine Parts","name":"Seal 32-43","id":"t1v208k0dmovnt6s1"},{"buy":1000,"sell":2000,"low":3,"name":"Seal 32-44","id":"uvbnu0dshmovnt6s1","cat":"Engine Parts","stock":0},{"id":"tbrri5h03movnt6s1","cat":"Engine Parts","name":"Seal Kit GN","sell":3000,"buy":1500,"low":3,"stock":0},{"cat":"Body Parts","id":"mpcdoju9kmovnt6s1","name":"Side Mirror King ⚠️CHECK SELL PRICE","low":3,"sell":7000,"buy":7000,"stock":0},{"stock":0,"id":"qfa7aelzbmovnt6s1","name":"Silicon Ndogo","cat":"Oils & Fluids","sell":2500,"buy":1700,"low":3},{"id":"b4j38hmqumovnt6s1","cat":"Electrical","name":"Spot Light ORG","buy":15000,"sell":20000,"low":3,"stock":0},{"stock":0,"id":"1r7tws21smovnt6s1","name":"Spring Brake","cat":"Brakes","sell":1000,"buy":300,"low":3},{"sell":1000,"buy":500,"low":3,"cat":"Body Parts","id":"q1pshly70movnt6s1","name":"Spring Stand Kubwa (Big)","stock":10},{"name":"Spring Stand Ndogo (Small)","cat":"Body Parts","id":"aaxm9zqhdmovnt6s1","buy":500,"sell":1000,"low":3,"stock":10},{"stock":0,"low":3,"buy":1200,"sell":2500,"cat":"Body Parts","name":"Stad GN","id":"ccmoa9agamovnt6s1"},{"stock":0,"cat":"Electrical","name":"Starter Motor ⚠️CHECK SELL PRICE","id":"xvdrza30emovnt6s1","sell":17000,"buy":17000,"low":3},{"name":"Steering GN","cat":"Body Parts","id":"42x6980gsmovnt6s1","low":3,"buy":7000,"sell":10000,"stock":0},{"buy":4000,"sell":6000,"low":3,"id":"905zepnbdmovnt6s1","name":"Stop Engine Switch","cat":"Electrical","stock":0},{"stock":0,"id":"xgpmwim1omovnt6s1","cat":"Electrical","name":"Switch Funguo GN (Ignition Key Switch)","sell":5000,"buy":3500,"low":3},{"sell":6500,"buy":4000,"low":3,"id":"e20njoz2nmovnt6s1","cat":"Electrical","name":"Tail Lamp DT","stock":0},{"stock":0,"name":"Tail Lamp XL","cat":"Electrical","id":"mk2kdzahqmovnt6s1","low":3,"buy":4000,"sell":6500},{"stock":0,"low":3,"buy":4000,"sell":6000,"cat":"Engine Parts","name":"Tapet Low YUAO","id":"f92zo7zxwmovnt6s1"},{"buy":700,"sell":1500,"low":3,"cat":"Electrical","name":"Terminal Fuse","id":"116yiyv7ymovnt6s1","stock":0},{"stock":0,"sell":1000,"buy":600,"low":3,"id":"9pymsi7f1movnt6s1","name":"Terminal Red/Black","cat":"Electrical"},{"stock":0,"id":"dc9vgfb2nmovnt6s1","name":"Tube 110/16","cat":"Tyres","sell":6500,"buy":5000,"low":3},{"stock":0,"id":"6xp3tih5mmovnt6s1","name":"Tube 300/18","cat":"Tyres","sell":6000,"buy":4000,"low":3},{"id":"77i2m6f7amovnt6s1","cat":"Engine Parts","name":"Uzi Moto (Engine Rope)","low":3,"sell":500,"buy":300,"stock":0},{"low":3,"sell":4000,"buy":2000,"name":"Valve Inlet 150","cat":"Engine Parts","id":"wzweiksk2movnt6s1","stock":0},{"stock":0,"sell":5000,"buy":3500,"low":3,"id":"ku1qdw9txmovnt6s1","cat":"Engine Parts","name":"Vikombe Shingo (Neck Cup)"},{"stock":10,"low":3,"buy":800,"sell":1000,"name":"Vin Tape","cat":"Other","id":"qntqx5vr0movnt6s1"},{"cat":"Electrical","name":"Wiring GN (Full Wiring)","id":"so2z3a92smovnt6s1","sell":15000,"buy":10000,"low":3,"stock":0},{"id":"g0dtdsfelmox7yhc6","cat":"Brakes","name":"Brake shoe - Nguvu","sell":3500,"buy":2200,"low":1,"stock":2},{"cat":"Brakes","name":"Brake shoe - Kubwa","id":"tdzx5cvuemox80fje","low":1,"buy":4000,"sell":6000,"stock":2},{"sell":20000,"buy":15000,"low":1,"cat":"Engine Parts","name":"Clutch plate Guta - Sinoray","id":"9b7mbd1b9mox83vqx","stock":1},{"stock":2,"low":1,"sell":12000,"buy":8000,"id":"9lhhqxd5emox86i0t","name":"Cluth plate guta - Kawaida","cat":"Engine Parts"},{"id":"4pndgfp7bmox88z5l","cat":"Engine Parts","name":"Brake pad - QFZ","low":1,"buy":1800,"sell":3000,"stock":4},{"name":"Oil kula","cat":"Engine Parts","id":"qz5v5ajoimox8ahag","low":1,"buy":3000,"sell":6000,"stock":2},{"buy":5000,"sell":8000,"low":1,"name":"Pump oil","cat":"Engine Parts","id":"txebx5cdcmox8beux","stock":1},{"stock":1,"sell":18000,"buy":13000,"low":5,"id":"2ebm6hirxmox8t50b","cat":"Engine Parts","name":"Magneto"},{"stock":1,"id":"ldgtxx8nbmox8zaxt","cat":"Engine Parts","name":"Ti ya juu","sell":15000,"buy":11000,"low":5},{"stock":1,"id":"pru43uxxzmox91xkd","name":"Ti ya chini","cat":"Engine Parts","buy":9000,"sell":15000,"low":5},{"id":"d1hiwro50mox949i3","name":"DIsk","cat":"Engine Parts","sell":15000,"buy":10000,"low":5,"stock":1},{"low":2,"sell":2000,"buy":1000,"id":"gumndgyq2mox99e86","name":"Mifupa","cat":"Engine Parts","stock":6},{"stock":1,"id":"xcj1ewv9pmox9d1e9","name":"Foot rest ya dereva - Sinoray Nyeusi","cat":"Engine Parts","sell":22000,"buy":17000,"low":5},{"id":"yqdl0h8cnmox9dtgv","name":"Foot rest ya dereva - Kinglion","cat":"Engine Parts","low":5,"sell":25000,"buy":15000,"stock":1},{"stock":1,"buy":3500,"sell":5000,"low":5,"cat":"Engine Parts","id":"ddo5tw9xhmox9j18a","name":"Stand ya betri"},{"stock":50,"low":10,"buy":40,"sell":200,"id":"ga34w448xmox9lk4z","cat":"Engine Parts","name":"Gololi za kibobo"},{"stock":5,"sell":1000,"buy":500,"low":2,"id":"vtz12cyormox9n40e","name":"Mkaa","cat":"Engine Parts"},{"stock":6,"sell":1500,"buy":500,"low":2,"id":"0kwk8yswgmox9nugk","name":"Nali nyeusi","cat":"Engine Parts"},{"stock":4,"sell":1000,"buy":500,"low":2,"name":"Switch brake","id":"7z74zke5xmox9pkln","cat":"Engine Parts"},{"stock":5,"buy":500,"sell":1000,"low":2,"name":"Bolt za rangi","cat":"Engine Parts","id":"y7g1hkm9pmox9q88t"},{"stock":5,"sell":1000,"buy":500,"low":2,"id":"b3t1iw9tbmox9qt0l","cat":"Engine Parts","name":"Vijazio vya mpira"},{"low":5,"buy":18000,"sell":25000,"cat":"Engine Parts","name":"Mkasi","id":"dgpfwmrlmmox9sz7i","stock":1},{"stock":1,"buy":10000,"sell":15000,"low":5,"cat":"Engine Parts","name":"Stand kubwa","id":"udu2xmk0vmox9tja2"},{"stock":1,"low":5,"sell":18000,"buy":12000,"name":"Stand kubwa - Sinoray","cat":"Engine Parts","id":"p4a2ycqopmox9u46r"},{"stock":3,"sell":11000,"buy":9750,"low":1,"name":"Oil - Mogasi","cat":"Engine Parts","id":"mi7h8u5afmoxa6fwk"},{"stock":3,"sell":8000,"buy":6500,"low":1,"name":"Oil - Max","cat":"Engine Parts","id":"d3vwvrph6moxa8l7h"},{"stock":1,"sell":45000,"buy":36000,"low":5,"name":"Tyre ya mbele - Sinoray","id":"fnglztkjbmoxaaf6e","cat":"Engine Parts"},{"sell":55000,"buy":45000,"low":5,"name":"Tyre ya mbele - Kingstone","cat":"Engine Parts","id":"8qpleusb3moxab1yd","stock":1},{"stock":1,"id":"6l88sf0ttmoxabq3i","cat":"Engine Parts","name":"Tyre ya nyuma - Sinoray","low":5,"buy":54000,"sell":65000},{"name":"Tyre nyuma - Kingstone","id":"pue1to0o2moxac98h","cat":"Engine Parts","low":5,"sell":75000,"buy":63000,"stock":1},{"buy":33000,"sell":42000,"low":5,"cat":"Engine Parts","name":"Tyre ya nyuma - Double life","id":"04enja4xsmoxad38n","stock":1},{"id":"jk7ipkv8qmoxadrpa","name":"Keria - Sinoray","cat":"Engine Parts","low":5,"buy":30000,"sell":40000,"stock":1},{"id":"8s8izzc4rmoxaf0yj","cat":"Engine Parts","name":"Rim ya mbele mapanga matatu - Nyeusi","low":5,"sell":75000,"buy":65000,"stock":1},{"low":5,"buy":65000,"sell":80000,"cat":"Engine Parts","name":"Rim ya nyuma mapanga matatu - Nyeusi","id":"66iprp3l8moxafmrm","stock":1},{"sell":100000,"buy":75000,"low":5,"id":"oms731y7lmoxaghtw","cat":"Engine Parts","name":"Shockup za mbele - Kinglion","stock":1},{"stock":1,"buy":41000,"sell":45000,"low":5,"cat":"Engine Parts","name":"Shockup za nyuma - Kinglion","id":"9hqrsbfdjmoxah6lp"},{"low":5,"buy":27000,"sell":35000,"cat":"Engine Parts","id":"9o2m1rg24moxaktmo","name":"Taa ya mbele - Sinoray","stock":1},{"id":"5aa849uwnmoxalfgb","name":"Taa ya mbele - Kawaida","cat":"Engine Parts","low":5,"sell":17000,"buy":13000,"stock":1},{"id":"2ljopbnk4moxanszu","name":"Show taa ya mbele - Boxer","cat":"Engine Parts","sell":15000,"buy":10000,"low":5,"stock":1},{"cat":"Engine Parts","name":"Tairi ya baiskeli","id":"yhc4ho0kamoxarwx1","low":5,"sell":15000,"buy":10000,"stock":1}],"sales":[],"purchases":[],"expenses":[],"instalments":[],"assets":[]};
+
+  try {
+    log('📦 Restoring products (' + backup.products.length + ' items)...');
+    await pushCollection('products', backup.products);
+    log('✅ Products restored — ' + backup.products.filter(p=>p.stock>0).length + ' with stock', 'ok');
+
+    log('🧾 Restoring sales...');
+    await pushCollection('sales', backup.sales);
+    log('✅ Sales restored', 'ok');
+
+    log('🏪 Restoring purchases...');
+    await pushCollection('purchases', backup.purchases);
+    log('✅ Purchases restored', 'ok');
+
+    log('💸 Restoring expenses...');
+    await pushCollection('expenses', backup.expenses);
+    log('✅ Expenses restored', 'ok');
+
+    log('📋 Restoring instalments...');
+    await pushCollection('instalments', backup.instalments);
+    log('✅ Instalments restored', 'ok');
+
+    log('🏷️ Restoring assets...');
+    await pushCollection('assets', backup.assets);
+    log('✅ Assets restored', 'ok');
+
+    log('', '');
+    log('🎉 ALL DATA RESTORED SUCCESSFULLY!', 'ok');
+    log('✔ Open JBS POS now — all your stock is back.', 'ok');
+    log('⚠️ Delete this restore.html from GitHub now.', 'err');
+
+    btn.textContent = '✅ Done!';
+    btn.style.background = '#2ecc71';
+
+  } catch(e) {
+    log('❌ Error: ' + e.message, 'err');
+    btn.disabled = false;
+    btn.textContent = '▶ Try Again';
+  }
+}
+</script>
+</body>
+</html>
