@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JBS Firebase Check</title>
+<style>
+body{font-family:sans-serif;background:#0f0f0f;color:#f0f0f0;padding:20px;margin:0}
+.box{background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:24px;max-width:600px;margin:0 auto}
+h2{color:#e8a000;margin-bottom:8px}
+p{color:#aaa;font-size:14px;margin-bottom:20px}
+button{background:#e8a000;color:#000;border:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:20px}
+button:disabled{opacity:.5}
+.result{background:#242424;border-radius:8px;padding:16px;font-size:13px;line-height:1.8;display:none}
+.ok{color:#2ecc71} .warn{color:#e8a000} .err{color:#e74c3c}
+.section{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #333}
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>🔍 Firebase Data Check</h2>
+  <p>This reads what is currently saved in Firebase so we can compare before restoring anything.</p>
+  <button onclick="checkFirebase()" id="btn">🔍 Check Firebase Now</button>
+  <div class="result" id="result"></div>
+</div>
+<script>
+const FIREBASE_PROJECT = 'jbs-spare-parts';
+const FIREBASE_API_KEY = 'AIzaSyD2Vvt6DA6G3IOTh3taFu7jBv53FR5Pc0E';
+const FS_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents`;
+
+function fromFS(fv) {
+  if (!fv) return null;
+  if ('nullValue' in fv) return null;
+  if ('booleanValue' in fv) return fv.booleanValue;
+  if ('integerValue' in fv) return parseInt(fv.integerValue);
+  if ('doubleValue' in fv) return fv.doubleValue;
+  if ('stringValue' in fv) return fv.stringValue;
+  if ('arrayValue' in fv) return (fv.arrayValue.values||[]).map(fromFS);
+  if ('mapValue' in fv) return Object.fromEntries(Object.entries(fv.mapValue.fields||{}).map(([k,v])=>[k,fromFS(v)]));
+  return null;
+}
+
+async function readCollection(name) {
+  try {
+    const res = await fetch(`${FS_BASE}/${name}/data?key=${FIREBASE_API_KEY}`);
+    if (res.status === 404) return { exists: false, items: [] };
+    if (!res.ok) return { exists: false, error: `HTTP ${res.status}`, items: [] };
+    const doc = await res.json();
+    if (doc.fields && doc.fields.items) {
+      const items = fromFS(doc.fields.items) || [];
+      const updated = doc.fields.updated ? fromFS(doc.fields.updated) : 'unknown';
+      return { exists: true, items, updated };
+    }
+    return { exists: true, items: [], updated: 'unknown' };
+  } catch(e) {
+    return { exists: false, error: e.message, items: [] };
+  }
+}
+
+async function checkFirebase() {
+  const btn = document.getElementById('btn');
+  const result = document.getElementById('result');
+  btn.disabled = true;
+  btn.textContent = '⏳ Checking...';
+  result.style.display = 'block';
+  result.innerHTML = '<span class="warn">Connecting to Firebase...</span>';
+
+  const collections = ['products', 'sales', 'purchases', 'expenses', 'instalments', 'assets'];
+  const results = await Promise.all(collections.map(c => readCollection(c)));
+
+  let html = '';
+  let totalProducts = 0;
+  let stockedProducts = 0;
+
+  collections.forEach((name, i) => {
+    const r = results[i];
+    const count = r.items.length;
+    const updated = r.updated ? new Date(r.updated).toLocaleString('en-TZ') : '—';
+
+    if (name === 'products') {
+      totalProducts = count;
+      stockedProducts = r.items.filter(p => p.stock > 0).length;
+    }
+
+    const status = !r.exists ? `<span class="err">❌ Not found / empty</span>` :
+                   count === 0 ? `<span class="warn">⚠️ Exists but empty</span>` :
+                   `<span class="ok">✅ ${count} records</span>`;
+
+    html += `<div class="section">
+      <strong style="color:#e8a000">${name.toUpperCase()}</strong><br>
+      Status: ${status}<br>
+      ${count > 0 ? `Last updated: <span style="color:#aaa">${updated}</span>` : ''}
+      ${name === 'products' && count > 0 ? `<br>Products with stock: <span class="${stockedProducts > 0 ? 'ok' : 'warn'}">${stockedProducts} / ${totalProducts}</span>` : ''}
+    </div>`;
+  });
+
+  // Verdict
+  const fbProducts = results[0];
+  const fbStocked = fbProducts.items.filter(p => p && p.stock > 0).length;
+
+  html += `<div style="margin-top:8px;padding:12px;border-radius:8px;background:#1a1a1a">
+    <strong>VERDICT:</strong><br>`;
+
+  if (fbProducts.items.length === 0) {
+    html += `<span class="err">⚠️ Firebase has NO products. Safe to restore from backup.</span>`;
+  } else if (fbStocked === 0) {
+    html += `<span class="warn">⚠️ Firebase has ${fbProducts.items.length} products but ZERO stock. The backup has more data. Safe to restore.</span>`;
+  } else if (fbStocked < 27) {
+    html += `<span class="warn">⚠️ Firebase has ${fbStocked} products with stock. Backup has 27+ stocked. Restore will add more.</span>`;
+  } else {
+    html += `<span class="ok">✅ Firebase has ${fbStocked} products with stock. May already be up to date. Compare before restoring.</span>`;
+  }
+
+  html += `</div>`;
+
+  result.innerHTML = html;
+  btn.disabled = false;
+  btn.textContent = '🔄 Check Again';
+}
+</script>
+</body>
+</html>
